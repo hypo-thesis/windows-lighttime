@@ -19,8 +19,9 @@ try
     }
     else if (cmdArgs.Length > 1 && cmdArgs[1] == "--status")
     {
-        Console.WriteLine(controller.CurrentBrightness);
-        return 0;
+        var b = controller.QueryCurrentBrightness();
+        Console.WriteLine(b >= 0 ? b : "unknown");
+        return b >= 0 ? 0 : 1;
     }
     else
     {

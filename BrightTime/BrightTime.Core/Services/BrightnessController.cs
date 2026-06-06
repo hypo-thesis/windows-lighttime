@@ -90,6 +90,32 @@ public class BrightnessController : IDisposable
     public void ShowOverlays() => _overlay.ShowOverlays();
     public void DisposeOverlays() => _overlay.DisposeOverlays();
 
+    public int QueryCurrentBrightness()
+    {
+        if (_wmi.IsAvailable())
+        {
+            var st = _wmi.GetBrightness();
+            if (st != null && st.Success)
+            {
+                CurrentBrightness = st.CurrentBrightness;
+                return st.CurrentBrightness;
+            }
+        }
+
+        _ddcci ??= new DdcCiBrightnessProvider(_log);
+        if (_ddcci.IsAvailable())
+        {
+            var st = _ddcci.GetBrightness();
+            if (st != null && st.Success)
+            {
+                CurrentBrightness = st.CurrentBrightness;
+                return st.CurrentBrightness;
+            }
+        }
+
+        return -1;
+    }
+
     public void Dispose()
     {
         _overlay.Dispose();
