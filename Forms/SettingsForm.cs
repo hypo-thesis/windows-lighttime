@@ -46,7 +46,7 @@ public class SettingsForm : Form
         _log = log;
 
         Text = "BrightTime";
-        Size = new Size(720, 800);
+        Size = new Size(750, 850);
         MinimumSize = new Size(600, 600);
         StartPosition = FormStartPosition.CenterScreen;
         FormClosing += SettingsForm_FormClosing;
@@ -57,105 +57,67 @@ public class SettingsForm : Form
         log.Info("SettingsForm opened");
     }
 
+    private Control Sep(int h) => new Panel { Height = h, Dock = DockStyle.Top };
+
     private void BuildUI()
     {
-        AutoScroll = true;
-        var pad = 12;
-        var rowH = 28;
-        var gap = 6;
-        var cw = ClientSize.Width - pad * 2 - SystemInformation.VerticalScrollBarWidth;
-        if (cw < 400) cw = 400;
-        var y = 8;
+        var body = new Panel { Dock = DockStyle.Fill, AutoScroll = true };
+        body.Padding = new Padding(12, 8, 12, 8);
 
-        void AddCtrl(Control c)
-        {
-            c.Location = new Point(pad, y);
-            if (c.Width == 0) c.Width = cw;
-            Controls.Add(c);
-            y += c.Height + gap;
-        }
+        var s = new Label { Text = "BrightTime", Font = new Font("Segoe UI", 16f, FontStyle.Bold), Height = 34, Dock = DockStyle.Top };
+        body.Controls.Add(s);
+        body.Controls.Add(Sep(4));
 
-        var title = new Label { Text = "BrightTime", Font = new Font("Segoe UI", 18f, FontStyle.Bold), Height = 36, Width = cw };
-        title.Padding = new Padding(0);
-        AddCtrl(title);
-        y += 4;
+        body.Controls.Add(lblCurrent = new Label { Text = "Current brightness: --", Height = 24, Dock = DockStyle.Top });
+        body.Controls.Add(lblTarget = new Label { Text = "Target brightness: --", Height = 24, Dock = DockStyle.Top });
+        body.Controls.Add(lblMethod = new Label { Text = "Active method: --", Height = 24, Dock = DockStyle.Top });
+        body.Controls.Add(lblAutoMode = new Label { Text = "Automatic mode: --", Height = 24, Dock = DockStyle.Top });
+        body.Controls.Add(Sep(8));
 
-        lblCurrent = new Label { Text = "Current brightness: --", Width = cw, Height = rowH };
-        AddCtrl(lblCurrent);
-        lblTarget = new Label { Text = "Target brightness: --", Width = cw, Height = rowH };
-        AddCtrl(lblTarget);
-        lblMethod = new Label { Text = "Active method: --", Width = cw, Height = rowH };
-        AddCtrl(lblMethod);
-        lblAutoMode = new Label { Text = "Automatic mode: --", Width = cw, Height = rowH };
-        AddCtrl(lblAutoMode);
-        y += 4;
-
-        var grp = new GroupBox { Text = "Controls", Width = cw, Height = 300 };
-        var gy = 24;
-        grp.Controls.Add(chkAuto = new CheckBox { Text = "Enable automatic brightness", Location = new Point(12, gy), Width = 350, Height = rowH });
+        var grp = new GroupBox { Text = "Controls", Height = 290, Dock = DockStyle.Top };
+        grp.Controls.Add(chkAuto = new CheckBox { Text = "Enable automatic brightness", Location = new Point(12, 24), Width = 350, Height = 26 });
         chkAuto.CheckedChanged += (_, _) => { _settings.AutomaticEnabled = chkAuto.Checked; UpdateAutoLabel(); };
-        gy += 34;
-
-        grp.Controls.Add(new Label { Text = "Manual brightness:", Location = new Point(12, gy), Width = 200, Height = 22 });
-        gy += 26;
-
-        lblBrightnessVal = new Label { Text = "100", Location = new Point(cw - 70, gy - 2), Width = 50, Height = rowH, TextAlign = ContentAlignment.MiddleRight };
-        grp.Controls.Add(lblBrightnessVal);
-        trackBrightness = new TrackBar { Minimum = 0, Maximum = 100, Value = 100, Location = new Point(12, gy), Width = cw - 90, Height = 40, TickFrequency = 10 };
+        grp.Controls.Add(new Label { Text = "Manual brightness:", Location = new Point(12, 56), Width = 200, Height = 20 });
+        grp.Controls.Add(lblBrightnessVal = new Label { Text = "100", Location = new Point(540, 80), Width = 50, Height = 26, TextAlign = ContentAlignment.MiddleRight });
+        grp.Controls.Add(trackBrightness = new TrackBar { Minimum = 0, Maximum = 100, Value = 100, Location = new Point(12, 80), Width = 520, Height = 40, TickFrequency = 10 });
         trackBrightness.ValueChanged += (_, _) => lblBrightnessVal.Text = trackBrightness.Value.ToString();
-        grp.Controls.Add(trackBrightness);
-        gy += 48;
-
-        grp.Controls.Add(btnApply = new Button { Text = "Apply Manual Brightness", Location = new Point(12, gy), Width = 200, Height = 32 });
+        grp.Controls.Add(btnApply = new Button { Text = "Apply Manual Brightness", Location = new Point(12, 126), Width = 200, Height = 30 });
         btnApply.Click += BtnApply_Click;
-        gy += 40;
-
-        grp.Controls.Add(chkSmooth = new CheckBox { Text = "Smooth transition", Location = new Point(12, gy), Width = 250, Height = rowH });
-        gy += 32;
-        grp.Controls.Add(chkOverlay = new CheckBox { Text = "Use overlay fallback", Location = new Point(12, gy), Width = 250, Height = rowH });
-        gy += 32;
-        grp.Controls.Add(chkRestore = new CheckBox { Text = "Restore brightness on exit", Location = new Point(12, gy), Width = 280, Height = rowH });
-        gy += 32;
-        grp.Controls.Add(chkStartup = new CheckBox { Text = "Start with Windows", Location = new Point(12, gy), Width = 250, Height = rowH });
+        grp.Controls.Add(chkSmooth = new CheckBox { Text = "Smooth transition", Location = new Point(12, 162), Width = 250, Height = 26 });
+        grp.Controls.Add(chkOverlay = new CheckBox { Text = "Use overlay fallback", Location = new Point(12, 192), Width = 250, Height = 26 });
+        grp.Controls.Add(chkRestore = new CheckBox { Text = "Restore brightness on exit", Location = new Point(12, 222), Width = 280, Height = 26 });
+        grp.Controls.Add(chkStartup = new CheckBox { Text = "Start with Windows", Location = new Point(12, 252), Width = 250, Height = 26 });
         chkStartup.CheckedChanged += ChkStartup_Changed;
+        body.Controls.Add(grp);
+        body.Controls.Add(Sep(8));
 
-        AddCtrl(grp);
-        y += 4;
-
-        var grp2 = new GroupBox { Text = "Schedule", Width = cw, Height = 260 };
-        scheduleList = new ListBox { Location = new Point(12, 24), Width = cw - 30, Height = 140 };
+        var grp2 = new GroupBox { Text = "Schedule", Height = 280, Dock = DockStyle.Top };
+        grp2.Controls.Add(scheduleList = new ListBox { Location = new Point(12, 22), Width = 520, Height = 150 });
         _scheduleSource.DataSource = new List<SchedulePoint>();
         scheduleList.DataSource = _scheduleSource;
         scheduleList.MouseDoubleClick += ScheduleList_DoubleClick;
-        grp2.Controls.Add(scheduleList);
-
-        grp2.Controls.Add(btnAdd = new Button { Text = "Add Point", Location = new Point(12, 172), Width = 100, Height = 30 });
+        grp2.Controls.Add(btnAdd = new Button { Text = "Add Point", Location = new Point(12, 180), Width = 100, Height = 28 });
         btnAdd.Click += BtnAdd_Click;
-        grp2.Controls.Add(btnRemove = new Button { Text = "Remove Selected", Location = new Point(120, 172), Width = 130, Height = 30 });
+        grp2.Controls.Add(btnRemove = new Button { Text = "Remove Selected", Location = new Point(120, 180), Width = 130, Height = 28 });
         btnRemove.Click += BtnRemove_Click;
-        grp2.Controls.Add(btnSave = new Button { Text = "Save Schedule", Location = new Point(cw - 120, 220), Width = 110, Height = 30, Font = new Font(Font, FontStyle.Bold) });
+        grp2.Controls.Add(btnSave = new Button { Text = "Save Schedule", Location = new Point(420, 240), Width = 110, Height = 28, Font = new Font(Font, FontStyle.Bold) });
         btnSave.Click += BtnSave_Click;
+        body.Controls.Add(grp2);
+        body.Controls.Add(Sep(8));
 
-        AddCtrl(grp2);
-        y += 4;
+        body.Controls.Add(lblStatus = new Label { Text = "", Height = 24, Dock = DockStyle.Top, ForeColor = Color.DarkOrange });
+        body.Controls.Add(Sep(8));
 
-        lblStatus = new Label { Text = "", Width = cw, Height = rowH, ForeColor = Color.DarkOrange };
-        AddCtrl(lblStatus);
-        y += 4;
-
-        var btnPanel = new Panel { Width = cw, Height = 40 };
-        btnMinimize = new Button { Text = "Minimize to Tray", Location = new Point(0, 4), Width = 150, Height = 32 };
+        var btnRow = new Panel { Height = 40, Dock = DockStyle.Top };
+        btnMinimize = new Button { Text = "Minimize to Tray", Location = new Point(0, 4), Width = 150, Height = 30 };
         btnMinimize.Click += (_, _) => { _closing = false; Close(); };
-        btnPanel.Controls.Add(btnMinimize);
-
-        btnExit = new Button { Text = "Exit", Location = new Point(160, 4), Width = 100, Height = 32, BackColor = Color.Crimson, ForeColor = Color.White, Font = new Font(Font, FontStyle.Bold) };
+        btnRow.Controls.Add(btnMinimize);
+        btnExit = new Button { Text = "Exit", Location = new Point(160, 4), Width = 100, Height = 30, BackColor = Color.Crimson, ForeColor = Color.White, Font = new Font(Font, FontStyle.Bold) };
         btnExit.Click += (_, _) => { _closing = true; Close(); };
-        btnPanel.Controls.Add(btnExit);
+        btnRow.Controls.Add(btnExit);
+        body.Controls.Add(btnRow);
 
-        btnPanel.Height = 40;
-        AddCtrl(btnPanel);
-
-        AutoScrollMinSize = new Size(0, y + 8);
+        Controls.Add(body);
     }
 
     private void ScheduleList_DoubleClick(object? sender, MouseEventArgs e)
