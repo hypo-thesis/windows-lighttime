@@ -1,12 +1,10 @@
-using System.IO;
 using System.Text.Json;
-using BrightTime.Models;
 
 namespace BrightTime.Services;
 
 public class SettingsService
 {
-    private readonly string _settingsPath;
+    private readonly string _path;
     private readonly LogService _log;
 
     public SettingsService(LogService log)
@@ -16,40 +14,37 @@ public class SettingsService
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "BrightTime");
         Directory.CreateDirectory(dir);
-        _settingsPath = Path.Combine(dir, "settings.json");
+        _path = Path.Combine(dir, "settings.json");
     }
 
-    public AppSettings Load()
+    public Models.AppSettings Load()
     {
         try
         {
-            if (File.Exists(_settingsPath))
+            if (File.Exists(_path))
             {
-                var json = File.ReadAllText(_settingsPath);
-                var settings = JsonSerializer.Deserialize<AppSettings>(json);
-                if (settings != null) return settings;
+                var json = File.ReadAllText(_path);
+                var s = JsonSerializer.Deserialize<Models.AppSettings>(json);
+                if (s != null) return s;
             }
         }
         catch (Exception ex)
         {
-            _log.Error($"Failed to load settings: {ex.Message}");
+            _log.Error($"Settings load: {ex.Message}");
         }
-
-        _log.Info("Creating default settings");
-        return new AppSettings();
+        return new Models.AppSettings();
     }
 
-    public void Save(AppSettings settings)
+    public void Save(Models.AppSettings s)
     {
         try
         {
-            var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(_settingsPath, json);
-            _log.Info("Settings saved");
+            var json = JsonSerializer.Serialize(s, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(_path, json);
         }
         catch (Exception ex)
         {
-            _log.Error($"Failed to save settings: {ex.Message}");
+            _log.Error($"Settings save: {ex.Message}");
         }
     }
 }

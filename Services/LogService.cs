@@ -1,39 +1,36 @@
 using System.Diagnostics;
-using System.IO;
 
 namespace BrightTime.Services;
 
 public class LogService
 {
-    private readonly string _logPath;
+    private readonly string _path;
     private readonly object _lock = new();
 
     public LogService()
     {
-        var logDir = Path.Combine(
+        var dir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "BrightTime", "logs");
-        Directory.CreateDirectory(logDir);
-        _logPath = Path.Combine(logDir, "brighttime.log");
+        Directory.CreateDirectory(dir);
+        _path = Path.Combine(dir, "brighttime.log");
     }
 
-    public void Info(string message) => Write("INFO", message);
-    public void Warn(string message) => Write("WARN", message);
-    public void Error(string message) => Write("ERROR", message);
+    public void Info(string m) => Write("INFO", m);
+    public void Warn(string m) => Write("WARN", m);
+    public void Error(string m) => Write("ERROR", m);
 
-    private void Write(string level, string message)
+    private void Write(string level, string m)
     {
         try
         {
             lock (_lock)
             {
-                var line = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [{level}] {message}";
+                var line = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [{level}] {m}";
                 Debug.WriteLine(line);
-                File.AppendAllText(_logPath, line + Environment.NewLine);
+                File.AppendAllText(_path, line + Environment.NewLine);
             }
         }
-        catch
-        {
-        }
+        catch { }
     }
 }

@@ -79,12 +79,13 @@ Brightness is interpolated between points. At 19:30, the target is ~57%.
 ```powershell
 git clone https://github.com/hypo-thesis/windows-lighttime.git
 cd windows-lighttime
-dotnet publish -c Release -r win-x64 `
+dotnet publish -c Release -r win-x64 --self-contained true `
   /p:PublishSingleFile=true `
-  /p:SelfContained=true `
+  /p:PublishReadyToRun=false `
   /p:IncludeNativeLibrariesForSelfExtract=true `
-  /p:PublishReadyToRun=true `
-  /p:EnableCompressionInSingleFile=true
+  /p:EnableCompressionInSingleFile=true `
+  /p:DebugType=None `
+  /p:DebugSymbols=false
 ```
 
 Output: `bin\Release\net8.0-windows\win-x64\publish\BrightTime.exe`
