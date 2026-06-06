@@ -1,0 +1,101 @@
+﻿<Window x:Class="BrightTime.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:BrightTime"
+        mc:Ignorable="d"
+        Title="BrightTime" Height="600" Width="520"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="CanMinimize">
+    <Window.Resources>
+        <Style TargetType="GroupBox">
+            <Setter Property="Margin" Value="0,0,0,8"/>
+            <Setter Property="Padding" Value="8"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style TargetType="Button">
+            <Setter Property="Padding" Value="12,4"/>
+            <Setter Property="Margin" Value="4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style TargetType="CheckBox">
+            <Setter Property="Margin" Value="0,3"/>
+            <Setter Property="FontWeight" Value="Normal"/>
+        </Style>
+    </Window.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="12">
+            <TextBlock Text="BrightTime" FontSize="22" FontWeight="Bold" Margin="0,0,0,8"/>
+            <TextBlock Text="Automatic brightness control based on time of day" FontSize="12" Foreground="Gray" Margin="0,0,0,12"/>
+
+            <GroupBox Header="Status">
+                <StackPanel>
+                    <TextBlock x:Name="StatusCurrentBrightness" Text="Current brightness: --"/>
+                    <TextBlock x:Name="StatusTargetBrightness" Text="Target brightness: --"/>
+                    <TextBlock x:Name="StatusActiveMethod" Text="Active method: --"/>
+                    <TextBlock x:Name="StatusAutoMode" Text="Automatic mode: --"/>
+                    <TextBlock x:Name="StatusMessage" Text="" Foreground="DarkOrange" TextWrapping="Wrap"/>
+                </StackPanel>
+            </GroupBox>
+
+            <GroupBox Header="Controls">
+                <StackPanel>
+                    <CheckBox x:Name="ChkAutoBrightness" Content="Enable automatic brightness"
+                              Checked="ChkAutoBrightness_CheckedChanged" Unchecked="ChkAutoBrightness_CheckedChanged"/>
+                    <Label Content="Manual brightness" Margin="0,8,0,0" Padding="0"/>
+                    <DockPanel Margin="0,0,0,8">
+                        <TextBox x:Name="TxtBrightnessValue" Text="100" Width="40" HorizontalAlignment="Right" IsReadOnly="True" TextAlignment="Center" Margin="0,0,8,0"/>
+                        <Slider x:Name="SliderBrightness" Minimum="0" Maximum="100" Value="100"
+                                TickFrequency="5" TickPlacement="BottomRight" IsSnapToTickEnabled="False"
+                                ValueChanged="SliderBrightness_ValueChanged"/>
+                    </DockPanel>
+                    <Button x:Name="BtnApplyBrightness" Content="Apply Manual Brightness" Click="BtnApplyBrightness_Click" HorizontalAlignment="Left" Padding="16,6"/>
+                    <CheckBox x:Name="ChkSmoothTransition" Content="Smooth transition" Margin="0,6,0,0"/>
+                    <CheckBox x:Name="ChkRestoreBrightness" Content="Restore previous brightness on exit"/>
+                    <CheckBox x:Name="ChkStartWithWindows" Content="Start with Windows"
+                              Checked="ChkStartWithWindows_Checked" Unchecked="ChkStartWithWindows_Unchecked"/>
+                    <CheckBox x:Name="ChkUseOverlay" Content="Use overlay fallback if hardware brightness fails"/>
+                </StackPanel>
+            </GroupBox>
+
+            <GroupBox Header="Schedule Editor">
+                <StackPanel>
+                    <ListBox x:Name="ScheduleList" Height="150" Margin="0,0,0,8">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border BorderBrush="LightGray" BorderThickness="0,0,0,1" Padding="4">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding Time}" Width="50" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Brightness, StringFormat='Brightness: {0}%'}" VerticalAlignment="Center"/>
+                                        <TextBox Grid.Column="2" Text="{Binding Time}" Width="60" Margin="4,0"/>
+                                        <TextBox Grid.Column="3" Text="{Binding Brightness}" Width="50" Margin="4,0"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    <DockPanel>
+                        <Button Content="Add Point" Click="BtnAddSchedulePoint_Click" HorizontalAlignment="Left"/>
+                        <Button Content="Remove Selected Point" x:Name="BtnRemoveSchedulePoint" Click="BtnRemoveSchedulePoint_Click" HorizontalAlignment="Left" Margin="8,4,4,4"/>
+                        <Button Content="Save Schedule" x:Name="BtnSaveSchedule" Click="BtnSaveSchedule_Click" HorizontalAlignment="Right" FontWeight="Bold"/>
+                    </DockPanel>
+                </StackPanel>
+            </GroupBox>
+
+            <GroupBox Header="Window Actions">
+                <WrapPanel>
+                    <Button Content="Minimize to Tray" x:Name="BtnMinimizeToTray" Click="BtnMinimizeToTray_Click"/>
+                    <Button Content="Exit" x:Name="BtnExit" Click="BtnExit_Click" Background="#E81123" Foreground="White"/>
+                </WrapPanel>
+            </GroupBox>
+        </StackPanel>
+    </ScrollViewer>
+</Window>

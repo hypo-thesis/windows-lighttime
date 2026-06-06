@@ -1,0 +1,25 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+*.cache
+*.cacheitems
+*.userprefs
+.DS_Store
+.vs/
+*.sln.docstates
+*.tmp
+*.log
+*.pdb
+*.nupkg
+*.dll
+
+# IDE
+.idea/
+*.swp
+*~
+
+# Build
+packages/
+*.nupkg
