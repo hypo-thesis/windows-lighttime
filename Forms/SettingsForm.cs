@@ -45,12 +45,9 @@ public class SettingsForm : Form
         _startupService = su;
         _log = log;
 
-        AutoScaleMode = AutoScaleMode.Dpi;
-        Font = new Font("Segoe UI", 11f, FontStyle.Regular, GraphicsUnit.Point);
-
         Text = "BrightTime";
-        Size = new Size(900, 900);
-        MinimumSize = new Size(800, 800);
+        Size = new Size(720, 800);
+        MinimumSize = new Size(600, 600);
         StartPosition = FormStartPosition.CenterScreen;
         FormClosing += SettingsForm_FormClosing;
 
@@ -62,111 +59,103 @@ public class SettingsForm : Form
 
     private void BuildUI()
     {
-        var y = 16;
-        var w = 840;
-        var pad = 16;
+        AutoScroll = true;
+        var pad = 12;
         var rowH = 28;
-        var gap = 8;
+        var gap = 6;
+        var cw = ClientSize.Width - pad * 2 - SystemInformation.VerticalScrollBarWidth;
+        if (cw < 400) cw = 400;
+        var y = 8;
 
-        var title = new Label
+        void AddCtrl(Control c)
         {
-            Text = "BrightTime",
-            Font = new Font("Segoe UI", 20f, FontStyle.Bold),
-            Bounds = new Rectangle(pad, y, w, 40)
-        };
-        Controls.Add(title);
-        y += 48;
+            c.Location = new Point(pad, y);
+            if (c.Width == 0) c.Width = cw;
+            Controls.Add(c);
+            y += c.Height + gap;
+        }
 
-        lblCurrent = MakeLabel($"Current brightness: --", pad, y, w, rowH); y += rowH + gap;
-        lblTarget = MakeLabel($"Target brightness: --", pad, y, w, rowH); y += rowH + gap;
-        lblMethod = MakeLabel($"Active method: --", pad, y, w, rowH); y += rowH + gap;
-        lblAutoMode = MakeLabel($"Automatic mode: --", pad, y, w, rowH); y += rowH + 16;
+        var title = new Label { Text = "BrightTime", Font = new Font("Segoe UI", 18f, FontStyle.Bold), Height = 36, Width = cw };
+        title.Padding = new Padding(0);
+        AddCtrl(title);
+        y += 4;
 
-        var grp = new GroupBox { Text = " Controls ", Bounds = new Rectangle(pad, y, w, 320) };
-        grp.Font = new Font("Segoe UI", 11f, FontStyle.Bold);
-        var gy = 28;
+        lblCurrent = new Label { Text = "Current brightness: --", Width = cw, Height = rowH };
+        AddCtrl(lblCurrent);
+        lblTarget = new Label { Text = "Target brightness: --", Width = cw, Height = rowH };
+        AddCtrl(lblTarget);
+        lblMethod = new Label { Text = "Active method: --", Width = cw, Height = rowH };
+        AddCtrl(lblMethod);
+        lblAutoMode = new Label { Text = "Automatic mode: --", Width = cw, Height = rowH };
+        AddCtrl(lblAutoMode);
+        y += 4;
 
-        chkAuto = new CheckBox { Text = "Enable automatic brightness", Bounds = new Rectangle(12, gy, 400, 28), Font = new Font("Segoe UI", 11f) };
+        var grp = new GroupBox { Text = "Controls", Width = cw, Height = 300 };
+        var gy = 24;
+        grp.Controls.Add(chkAuto = new CheckBox { Text = "Enable automatic brightness", Location = new Point(12, gy), Width = 350, Height = rowH });
         chkAuto.CheckedChanged += (_, _) => { _settings.AutomaticEnabled = chkAuto.Checked; UpdateAutoLabel(); };
-        grp.Controls.Add(chkAuto);
-        gy += 36;
+        gy += 34;
 
-        var lblTrk = new Label { Text = "Manual brightness:", Bounds = new Rectangle(12, gy, 200, 24), Font = new Font("Segoe UI", 11f) };
-        grp.Controls.Add(lblTrk);
-        gy += 28;
+        grp.Controls.Add(new Label { Text = "Manual brightness:", Location = new Point(12, gy), Width = 200, Height = 22 });
+        gy += 26;
 
-        lblBrightnessVal = new Label { Text = "100", Bounds = new Rectangle(w - 70, gy, 50, 28), TextAlign = ContentAlignment.MiddleRight, Font = new Font("Segoe UI", 12f, FontStyle.Bold) };
-        trackBrightness = new TrackBar { Minimum = 0, Maximum = 100, Value = 100, Bounds = new Rectangle(12, gy, w - 90, 45), TickFrequency = 10, LargeChange = 10 };
-        trackBrightness.ValueChanged += (_, _) => lblBrightnessVal.Text = trackBrightness.Value.ToString();
+        lblBrightnessVal = new Label { Text = "100", Location = new Point(cw - 70, gy - 2), Width = 50, Height = rowH, TextAlign = ContentAlignment.MiddleRight };
         grp.Controls.Add(lblBrightnessVal);
+        trackBrightness = new TrackBar { Minimum = 0, Maximum = 100, Value = 100, Location = new Point(12, gy), Width = cw - 90, Height = 40, TickFrequency = 10 };
+        trackBrightness.ValueChanged += (_, _) => lblBrightnessVal.Text = trackBrightness.Value.ToString();
         grp.Controls.Add(trackBrightness);
-        gy += 52;
+        gy += 48;
 
-        btnApply = new Button { Text = "Apply Manual Brightness", Bounds = new Rectangle(12, gy, 240, 34), Font = new Font("Segoe UI", 11f) };
+        grp.Controls.Add(btnApply = new Button { Text = "Apply Manual Brightness", Location = new Point(12, gy), Width = 200, Height = 32 });
         btnApply.Click += BtnApply_Click;
-        grp.Controls.Add(btnApply);
-        gy += 42;
+        gy += 40;
 
-        chkSmooth = new CheckBox { Text = "Smooth transition", Bounds = new Rectangle(12, gy, 280, 28), Font = new Font("Segoe UI", 11f) };
-        grp.Controls.Add(chkSmooth);
-        gy += 34;
-
-        chkOverlay = new CheckBox { Text = "Use overlay fallback", Bounds = new Rectangle(12, gy, 280, 28), Font = new Font("Segoe UI", 11f) };
-        grp.Controls.Add(chkOverlay);
-        gy += 34;
-
-        chkRestore = new CheckBox { Text = "Restore brightness on exit", Bounds = new Rectangle(12, gy, 320, 28), Font = new Font("Segoe UI", 11f) };
-        grp.Controls.Add(chkRestore);
-        gy += 34;
-
-        chkStartup = new CheckBox { Text = "Start with Windows", Bounds = new Rectangle(12, gy, 280, 28), Font = new Font("Segoe UI", 11f) };
+        grp.Controls.Add(chkSmooth = new CheckBox { Text = "Smooth transition", Location = new Point(12, gy), Width = 250, Height = rowH });
+        gy += 32;
+        grp.Controls.Add(chkOverlay = new CheckBox { Text = "Use overlay fallback", Location = new Point(12, gy), Width = 250, Height = rowH });
+        gy += 32;
+        grp.Controls.Add(chkRestore = new CheckBox { Text = "Restore brightness on exit", Location = new Point(12, gy), Width = 280, Height = rowH });
+        gy += 32;
+        grp.Controls.Add(chkStartup = new CheckBox { Text = "Start with Windows", Location = new Point(12, gy), Width = 250, Height = rowH });
         chkStartup.CheckedChanged += ChkStartup_Changed;
-        grp.Controls.Add(chkStartup);
 
-        Controls.Add(grp);
-        y += grp.Height + 16;
+        AddCtrl(grp);
+        y += 4;
 
-        var grp2 = new GroupBox { Text = " Schedule ", Bounds = new Rectangle(pad, y, w, 280) };
-        grp2.Font = new Font("Segoe UI", 11f, FontStyle.Bold);
-        scheduleList = new ListBox { Bounds = new Rectangle(12, 28, w - 30, 140), Font = new Font("Segoe UI", 11f) };
+        var grp2 = new GroupBox { Text = "Schedule", Width = cw, Height = 260 };
+        scheduleList = new ListBox { Location = new Point(12, 24), Width = cw - 30, Height = 140 };
         _scheduleSource.DataSource = new List<SchedulePoint>();
         scheduleList.DataSource = _scheduleSource;
         scheduleList.MouseDoubleClick += ScheduleList_DoubleClick;
         grp2.Controls.Add(scheduleList);
 
-        btnAdd = new Button { Text = "Add Point", Bounds = new Rectangle(12, 180, 110, 32), Font = new Font("Segoe UI", 11f) };
+        grp2.Controls.Add(btnAdd = new Button { Text = "Add Point", Location = new Point(12, 172), Width = 100, Height = 30 });
         btnAdd.Click += BtnAdd_Click;
-        grp2.Controls.Add(btnAdd);
-
-        btnRemove = new Button { Text = "Remove Selected", Bounds = new Rectangle(130, 180, 140, 32), Font = new Font("Segoe UI", 11f) };
+        grp2.Controls.Add(btnRemove = new Button { Text = "Remove Selected", Location = new Point(120, 172), Width = 130, Height = 30 });
         btnRemove.Click += BtnRemove_Click;
-        grp2.Controls.Add(btnRemove);
-
-        btnSave = new Button { Text = "Save Schedule", Bounds = new Rectangle(w - 130, 235, 120, 32), Font = new Font("Segoe UI", 11f, FontStyle.Bold) };
+        grp2.Controls.Add(btnSave = new Button { Text = "Save Schedule", Location = new Point(cw - 120, 220), Width = 110, Height = 30, Font = new Font(Font, FontStyle.Bold) });
         btnSave.Click += BtnSave_Click;
-        grp2.Controls.Add(btnSave);
 
-        Controls.Add(grp2);
-        y += grp2.Height + 16;
+        AddCtrl(grp2);
+        y += 4;
 
-        lblStatus = new Label { Text = "", Bounds = new Rectangle(pad, y, w, 28), ForeColor = Color.DarkOrange, Font = new Font("Segoe UI", 11f) };
-        Controls.Add(lblStatus);
-        y += 36;
+        lblStatus = new Label { Text = "", Width = cw, Height = rowH, ForeColor = Color.DarkOrange };
+        AddCtrl(lblStatus);
+        y += 4;
 
-        btnMinimize = new Button { Text = "Minimize to Tray", Bounds = new Rectangle(pad, y, 180, 36), Font = new Font("Segoe UI", 11f) };
+        var btnPanel = new Panel { Width = cw, Height = 40 };
+        btnMinimize = new Button { Text = "Minimize to Tray", Location = new Point(0, 4), Width = 150, Height = 32 };
         btnMinimize.Click += (_, _) => { _closing = false; Close(); };
-        Controls.Add(btnMinimize);
+        btnPanel.Controls.Add(btnMinimize);
 
-        btnExit = new Button { Text = "Exit", Bounds = new Rectangle(pad + 190, y, 120, 36), BackColor = Color.Crimson, ForeColor = Color.White, Font = new Font("Segoe UI", 11f, FontStyle.Bold) };
+        btnExit = new Button { Text = "Exit", Location = new Point(160, 4), Width = 100, Height = 32, BackColor = Color.Crimson, ForeColor = Color.White, Font = new Font(Font, FontStyle.Bold) };
         btnExit.Click += (_, _) => { _closing = true; Close(); };
-        Controls.Add(btnExit);
-    }
+        btnPanel.Controls.Add(btnExit);
 
-    private Label MakeLabel(string text, int x, int y, int w, int h)
-    {
-        var lbl = new Label { Text = text, Bounds = new Rectangle(x, y, w, h), Font = new Font("Segoe UI", 11f) };
-        Controls.Add(lbl);
-        return lbl;
+        btnPanel.Height = 40;
+        AddCtrl(btnPanel);
+
+        AutoScrollMinSize = new Size(0, y + 8);
     }
 
     private void ScheduleList_DoubleClick(object? sender, MouseEventArgs e)
@@ -226,22 +215,20 @@ public class SettingsForm : Form
     {
         public ScheduleEditDialog(SchedulePoint pt)
         {
-            AutoScaleMode = AutoScaleMode.Dpi;
-            Font = new Font("Segoe UI", 11f);
             Text = "Edit Schedule Point";
-            Size = new Size(340, 200);
+            Size = new Size(300, 180);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             StartPosition = FormStartPosition.CenterParent;
             MinimizeBox = false;
             MaximizeBox = false;
 
-            new Label { Text = "Time (HH:MM):", Bounds = new Rectangle(16, 20, 120, 24), Font = Font, Parent = this };
-            var txtTime = new TextBox { Text = pt.Time, Bounds = new Rectangle(140, 18, 100, 26), Font = Font, Parent = this };
+            new Label { Text = "Time (HH:MM):", Bounds = new Rectangle(14, 18, 100, 22), Parent = this };
+            var txtTime = new TextBox { Text = pt.Time, Bounds = new Rectangle(120, 16, 80, 24), Parent = this };
 
-            new Label { Text = "Brightness (0-100):", Bounds = new Rectangle(16, 56, 130, 24), Font = Font, Parent = this };
-            var txtBrightness = new TextBox { Text = pt.Brightness.ToString(), Bounds = new Rectangle(140, 54, 70, 26), Font = Font, Parent = this };
+            new Label { Text = "Brightness (0-100):", Bounds = new Rectangle(14, 50, 120, 22), Parent = this };
+            var txtBrightness = new TextBox { Text = pt.Brightness.ToString(), Bounds = new Rectangle(120, 48, 60, 24), Parent = this };
 
-            var ok = new Button { Text = "OK", Bounds = new Rectangle(100, 100, 80, 30), Font = Font, Parent = this };
+            var ok = new Button { Text = "OK", Bounds = new Rectangle(70, 90, 75, 28), Parent = this };
             ok.Click += (_, _) =>
             {
                 pt.Time = txtTime.Text;
@@ -251,7 +238,7 @@ public class SettingsForm : Form
                 Close();
             };
 
-            var cancel = new Button { Text = "Cancel", Bounds = new Rectangle(190, 100, 80, 30), Font = Font, Parent = this };
+            var cancel = new Button { Text = "Cancel", Bounds = new Rectangle(155, 90, 75, 28), Parent = this };
             cancel.Click += (_, _) => { DialogResult = DialogResult.Cancel; Close(); };
         }
     }
