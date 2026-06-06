@@ -198,10 +198,7 @@ public class SettingsForm : Form
         _settings.LastManualBrightness = b;
         _settings.ManualOverrideUntil = DateTime.Now.AddMinutes(_settings.ManualOverrideMinutes);
 
-        if (chkSmooth.Checked)
-            _brightness.SmoothTransition(_brightness.CurrentBrightness, b, 10, 200);
-        else
-            _brightness.SetBrightness(b);
+        _brightness.SetBrightness(b);
 
         _settingsService.Save(_settings);
         UpdateStatus();

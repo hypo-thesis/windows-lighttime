@@ -13,7 +13,8 @@ public class TrayAppContext : ApplicationContext
     private readonly StartupService _startupService;
     private readonly LogService _log;
     private readonly NotifyIcon _tray;
-    private readonly System.Threading.Timer _timer;
+    private readonly System.Windows.Forms.Timer _timer;
+    private readonly System.Windows.Forms.Timer _startupTimer;
     private SettingsForm? _settingsForm;
 
     public TrayAppContext(AppSettings settings, SettingsService ss, BrightnessController bc,
@@ -35,9 +36,40 @@ public class TrayAppContext : ApplicationContext
         };
         _tray.DoubleClick += (_, _) => ShowForm();
 
-        _timer = new System.Threading.Timer(_ => TimerTick(), null, 0, 300000);
+        _timer = new System.Windows.Forms.Timer();
+        _timer.Interval = 300000;
+        _timer.Tick += (_, _) => TimerTick();
+        _timer.Start();
+
+        _startupTimer = new System.Windows.Forms.Timer();
+        _startupTimer.Interval = 1000;
+        _startupTimer.Tick += (_, _) =>
+        {
+            _startupTimer.Stop();
+            _startupTimer.Dispose();
+            ApplyStartupBrightness();
+        };
+        _startupTimer.Start();
 
         log.Info("TrayAppContext started");
+    }
+
+    private void ApplyStartupBrightness()
+    {
+        try
+        {
+            if (!_settings.AutomaticEnabled) return;
+            if (_settings.ManualOverrideUntil.HasValue && DateTime.Now < _settings.ManualOverrideUntil.Value)
+                return;
+
+            var target = _scheduleService.GetTargetBrightness();
+            _brightness.SetBrightness(target);
+            _log.Info($"Startup: applied schedule brightness {target}");
+        }
+        catch (Exception ex)
+        {
+            _log.Error($"Startup brightness: {ex.Message}");
+        }
     }
 
     private ContextMenuStrip BuildMenu()
@@ -96,10 +128,7 @@ public class TrayAppContext : ApplicationContext
         var item = new ToolStripMenuItem(text);
         item.Click += (_, _) =>
         {
-            if (_settings.SmoothTransitionEnabled)
-                _brightness.SmoothTransition(_brightness.CurrentBrightness, val, 10, 200);
-            else
-                _brightness.SetBrightness(val);
+            _brightness.SetBrightness(val);
             _settings.LastManualBrightness = val;
             _settings.ManualOverrideUntil = DateTime.Now.AddMinutes(_settings.ManualOverrideMinutes);
             _settingsService.Save(_settings);
@@ -135,10 +164,7 @@ public class TrayAppContext : ApplicationContext
             if (_brightness.CurrentBrightness != target)
             {
                 _log.Info($"Schedule: target {target} (current {_brightness.CurrentBrightness})");
-                if (_settings.SmoothTransitionEnabled)
-                    _brightness.SmoothTransition(_brightness.CurrentBrightness, target, 10, 200);
-                else
-                    _brightness.SetBrightness(target);
+                _brightness.SetBrightness(target);
 
                 if (_settingsForm != null && !_settingsForm.IsDisposed && _settingsForm.Visible)
                     _settingsForm.UpdateStatus();

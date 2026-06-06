@@ -69,15 +69,9 @@ public class BrightnessController : IDisposable
         return false;
     }
 
-    public void SmoothTransition(int from, int to, int steps = 10, int delayMs = 200)
+    public void SetBrightnessDirect(int brightness)
     {
-        if (from == to) return;
-        for (int i = 1; i <= steps; i++)
-        {
-            var mid = from + (to - from) * i / steps;
-            SetBrightness(mid);
-            Thread.Sleep(delayMs);
-        }
+        SetBrightness(brightness);
     }
 
     public void RestorePrevious()
