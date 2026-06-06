@@ -14,7 +14,6 @@ public class TrayAppContext : ApplicationContext
     private readonly LogService _log;
     private readonly NotifyIcon _tray;
     private readonly System.Windows.Forms.Timer _timer;
-    private readonly System.Windows.Forms.Timer _startupTimer;
     private SettingsForm? _settingsForm;
 
     public TrayAppContext(AppSettings settings, SettingsService ss, BrightnessController bc,
@@ -29,29 +28,19 @@ public class TrayAppContext : ApplicationContext
 
         _tray = new NotifyIcon
         {
-            Icon = LoadIcon(),
+            Icon = MakeIcon(),
             Text = "BrightTime",
             ContextMenuStrip = BuildMenu(),
             Visible = true
         };
         _tray.DoubleClick += (_, _) => ShowForm();
 
+        ApplyStartupBrightness();
+
         _timer = new System.Windows.Forms.Timer();
         _timer.Interval = 300000;
         _timer.Tick += (_, _) => TimerTick();
         _timer.Start();
-
-        _startupTimer = new System.Windows.Forms.Timer();
-        _startupTimer.Interval = 1000;
-        _startupTimer.Tick += (_, _) =>
-        {
-            _startupTimer.Stop();
-            _startupTimer.Dispose();
-            ApplyStartupBrightness();
-        };
-        _startupTimer.Start();
-
-        log.Info("TrayAppContext started");
     }
 
     private void ApplyStartupBrightness()
@@ -64,12 +53,8 @@ public class TrayAppContext : ApplicationContext
 
             var target = _scheduleService.GetTargetBrightness();
             _brightness.SetBrightness(target);
-            _log.Info($"Startup: applied schedule brightness {target}");
         }
-        catch (Exception ex)
-        {
-            _log.Error($"Startup brightness: {ex.Message}");
-        }
+        catch { }
     }
 
     private ContextMenuStrip BuildMenu()
@@ -169,9 +154,7 @@ public class TrayAppContext : ApplicationContext
 
             if (_brightness.CurrentBrightness != target)
             {
-                _log.Info($"Schedule: target {target} (current {_brightness.CurrentBrightness})");
                 _brightness.SetBrightness(target);
-
                 if (_settingsForm != null && !_settingsForm.IsDisposed && _settingsForm.Visible)
                     _settingsForm.UpdateStatus();
             }
@@ -184,7 +167,6 @@ public class TrayAppContext : ApplicationContext
 
     private void ExitApp()
     {
-        _log.Info("Exiting");
         _timer.Dispose();
 
         if (_settings.RestoreBrightnessOnExit)
@@ -202,16 +184,8 @@ public class TrayAppContext : ApplicationContext
         ExitThread();
     }
 
-    private static Icon LoadIcon()
+    private static Icon MakeIcon()
     {
-        try
-        {
-            var asm = System.Reflection.Assembly.GetExecutingAssembly();
-            using var s = asm.GetManifestResourceStream("BrightTime.Assets.app.ico");
-            if (s != null) return new Icon(s);
-        }
-        catch { }
-
         using var bmp = new System.Drawing.Bitmap(16, 16);
         using var g = System.Drawing.Graphics.FromImage(bmp);
         g.Clear(Color.Transparent);

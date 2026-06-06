@@ -13,23 +13,17 @@ static class Program
         ApplicationConfiguration.Initialize();
 
         var log = new LogService();
-        log.Info("BrightTime starting");
-
         var settingsService = new SettingsService(log);
         var settings = settingsService.Load();
+        var startup = new StartupService();
 
-        if (settings.StartWithWindows)
-            new StartupService().Enable();
-        else
-            new StartupService().Disable();
+        if (settings.StartWithWindows) startup.Enable();
+        else startup.Disable();
 
         var scheduleService = new ScheduleService(settings);
         var brightness = new BrightnessController(log, settings);
-        var startup = new StartupService();
 
         Application.Run(new TrayAppContext(settings, settingsService, brightness,
             scheduleService, startup, log));
-
-        log.Info("BrightTime exited");
     }
 }

@@ -6,22 +6,15 @@
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+
     <ServerGarbageCollection>false</ServerGarbageCollection>
+    <PublishReadyToRun>false</PublishReadyToRun>
     <DebugType>none</DebugType>
     <DebugSymbols>false</DebugSymbols>
-    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
-    <AssemblyName>BrightTime</AssemblyName>
-    <RootNamespace>BrightTime</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="System.Management" Version="8.0.0" />
   </ItemGroup>
-
-  <ItemGroup>
-    <EmbeddedResource Include="Assets\app.ico" />
-  </ItemGroup>
-
-
 
 </Project>
