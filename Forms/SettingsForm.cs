@@ -46,7 +46,8 @@ public class SettingsForm : Form
         _log = log;
 
         Text = "BrightTime";
-        Size = new Size(480, 620);
+        Size = new Size(500, 700);
+        MinimumSize = new Size(500, 600);
         FormBorderStyle = FormBorderStyle.FixedSingle;
         MaximizeBox = false;
         StartPosition = FormStartPosition.CenterScreen;
@@ -67,7 +68,7 @@ public class SettingsForm : Form
         lblMethod = CreateLabel($"Active method: --", y); y += 24;
         lblAutoMode = CreateLabel($"Automatic mode: --", y); y += 30;
 
-        var grp = new GroupBox { Text = "Controls", Bounds = new Rectangle(12, y, 440, 200) };
+        var grp = new GroupBox { Text = "Controls", Bounds = new Rectangle(12, y, 460, 270) };
         var gy = 20;
 
         chkAuto = new CheckBox { Text = "Enable automatic brightness", Bounds = new Rectangle(8, gy, 300, 24) };
@@ -110,8 +111,8 @@ public class SettingsForm : Form
         Controls.Add(grp);
         y += grp.Height + 8;
 
-        var grp2 = new GroupBox { Text = "Schedule", Bounds = new Rectangle(12, y, 440, 200) };
-        scheduleList = new ListBox { Bounds = new Rectangle(8, 20, 420, 100), DisplayMember = "Display" };
+        var grp2 = new GroupBox { Text = "Schedule", Bounds = new Rectangle(12, y, 460, 200) };
+        scheduleList = new ListBox { Bounds = new Rectangle(8, 20, 440, 100), DisplayMember = "Display" };
         _scheduleSource.DataSource = new List<SchedulePoint>();
         scheduleList.DataSource = _scheduleSource;
         grp2.Controls.Add(scheduleList);
@@ -124,14 +125,16 @@ public class SettingsForm : Form
         btnRemove.Click += BtnRemove_Click;
         grp2.Controls.Add(btnRemove);
 
-        btnSave = new Button { Text = "Save Schedule", Bounds = new Rectangle(340, 165, 90, 26) };
+        btnSave = new Button { Text = "Save Schedule", Bounds = new Rectangle(360, 165, 90, 26) };
         btnSave.Click += BtnSave_Click;
         grp2.Controls.Add(btnSave);
 
         Controls.Add(grp2);
         y += grp2.Height + 8;
 
-        lblStatus = CreateLabel("", y); y += 26;
+        lblStatus = new Label { Text = "", Bounds = new Rectangle(14, y, 460, 22), ForeColor = Color.DarkOrange };
+        Controls.Add(lblStatus);
+        y += 26;
 
         btnMinimize = new Button { Text = "Minimize to Tray", Bounds = new Rectangle(12, y, 130, 28) };
         btnMinimize.Click += (_, _) => { _closing = false; Close(); };
@@ -144,7 +147,7 @@ public class SettingsForm : Form
 
     private Label CreateLabel(string text, int y)
     {
-        var lbl = new Label { Text = text, Bounds = new Rectangle(14, y, 440, 22) };
+        var lbl = new Label { Text = text, Bounds = new Rectangle(14, y, 460, 22) };
         Controls.Add(lbl);
         return lbl;
     }
