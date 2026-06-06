@@ -8,3 +8,5 @@ obj/
 *.tmp
 *.log
 *.pdb
+
+deploy/

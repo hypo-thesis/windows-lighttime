@@ -14,6 +14,7 @@ public class TrayAppContext : ApplicationContext
     private readonly BrightTimeTray.Services.StartupService _startupService;
     private readonly LogService _log;
     private readonly NotifyIcon _tray;
+    private readonly System.Windows.Forms.Timer _timer;
     private SettingsForm? _settingsForm;
 
     private static string? _applyPath;
@@ -35,6 +36,13 @@ public class TrayAppContext : ApplicationContext
             if (File.Exists(p)) _applyPath = p;
         }
 
+        ApplyStartupBrightness();
+
+        _timer = new System.Windows.Forms.Timer();
+        _timer.Interval = 300000;
+        _timer.Tick += (_, _) => TimerTick();
+        _timer.Start();
+
         _tray = new NotifyIcon
         {
             Icon = MakeIcon(),
@@ -43,6 +51,20 @@ public class TrayAppContext : ApplicationContext
             Visible = true
         };
         _tray.DoubleClick += (_, _) => ShowForm();
+    }
+
+    private void ApplyStartupBrightness()
+    {
+        try
+        {
+            if (!_settings.AutomaticEnabled) return;
+            if (_settings.ManualOverrideUntil.HasValue && DateTime.Now < _settings.ManualOverrideUntil.Value)
+                return;
+
+            var target = _scheduleService.GetTargetBrightness();
+            _brightness.SetBrightness(target);
+        }
+        catch { }
     }
 
     private ContextMenuStrip BuildMenu()
@@ -150,6 +172,30 @@ public class TrayAppContext : ApplicationContext
         _settingsForm.UpdateStatus();
     }
 
+    private void TimerTick()
+    {
+        try
+        {
+            if (!_settings.AutomaticEnabled) return;
+            if (_settings.ManualOverrideUntil.HasValue && DateTime.Now < _settings.ManualOverrideUntil.Value)
+                return;
+
+            _settings.ManualOverrideUntil = null;
+            var target = _scheduleService.GetTargetBrightness();
+
+            if (_brightness.CurrentBrightness != target)
+            {
+                _brightness.SetBrightness(target);
+                if (_settingsForm != null && !_settingsForm.IsDisposed && _settingsForm.Visible)
+                    _settingsForm.UpdateStatus();
+            }
+        }
+        catch (Exception ex)
+        {
+            _log.Error($"Timer: {ex.Message}");
+        }
+    }
+
     private void RunApplyNow()
     {
         if (_applyPath == null) return;
@@ -223,6 +269,8 @@ public class TrayAppContext : ApplicationContext
 
     private void ExitApp()
     {
+        _timer.Dispose();
+
         if (_settings.RestoreBrightnessOnExit)
             _brightness.RestorePrevious();
 
@@ -252,6 +300,7 @@ public class TrayAppContext : ApplicationContext
     {
         if (disposing)
         {
+            _timer.Dispose();
             _brightness.Dispose();
             _tray.Dispose();
         }

@@ -22,9 +22,10 @@ public class WmiBrightnessProvider : IBrightnessProvider
         var st = new BrightnessStatus { Success = false, ProviderName = Name };
         try
         {
+            var scope = new ManagementScope(@"\\.\root\wmi");
             using var searcher = new ManagementObjectSearcher(
-                "root\\WMI",
-                "SELECT * FROM WmiMonitorBrightness");
+                scope,
+                new ObjectQuery("SELECT * FROM WmiMonitorBrightness"));
             foreach (ManagementObject item in searcher.Get())
             {
                 st.CurrentBrightness = Convert.ToInt32(item["CurrentBrightness"]);
@@ -47,9 +48,10 @@ public class WmiBrightnessProvider : IBrightnessProvider
         try
         {
             brightness = Math.Clamp(brightness, 0, 100);
+            var scope = new ManagementScope(@"\\.\root\wmi");
             using var searcher = new ManagementObjectSearcher(
-                "root\\WMI",
-                "SELECT * FROM WmiMonitorBrightnessMethods");
+                scope,
+                new ObjectQuery("SELECT * FROM WmiMonitorBrightnessMethods"));
             bool success = false;
             foreach (ManagementObject method in searcher.Get())
             {
