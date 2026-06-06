@@ -7,9 +7,9 @@ public class BrightnessController : IDisposable
 {
     private readonly LogService _log;
     private readonly AppSettings _settings;
-    private readonly List<IBrightnessProvider> _providers = new();
-    private readonly OverlayBrightnessProvider _overlay;
+    private readonly WmiBrightnessProvider _wmi;
     private readonly DdcCiBrightnessProvider? _ddcci;
+    private readonly OverlayBrightnessProvider _overlay;
     private bool _overlayActive;
 
     public int CurrentBrightness { get; private set; } = 100;
@@ -22,10 +22,9 @@ public class BrightnessController : IDisposable
     {
         _log = log;
         _settings = settings;
-        _overlay = new OverlayBrightnessProvider(log);
+        _wmi = new WmiBrightnessProvider(log);
         _ddcci = new DdcCiBrightnessProvider(log);
-        _providers.Add(new WmiBrightnessProvider(log));
-        _providers.Add(_ddcci);
+        _overlay = new OverlayBrightnessProvider(log);
     }
 
     public bool SetBrightness(int brightness)
@@ -34,45 +33,57 @@ public class BrightnessController : IDisposable
         TargetBrightness = brightness;
         _log.Info($"Setting brightness to {brightness}");
 
-        if (_overlayActive)
+        // 1. Try WMI (internal/laptop display)
+        if (_wmi.IsAvailable())
         {
-            _overlay.HideAll();
-            _overlayActive = false;
-        }
-
-        foreach (var p in _providers)
-        {
-            if (!p.IsAvailable()) continue;
-            if (p.SetBrightness(brightness))
+            if (_wmi.SetBrightness(brightness))
             {
-                ActiveMethod = p.Name;
+                _overlay.DisposeOverlays();
+                _overlayActive = false;
+                ActiveMethod = _wmi.Name;
                 CurrentBrightness = brightness;
-                Status = $"Brightness {brightness}% via {p.Name}";
+                Status = $"WMI hardware brightness ({brightness}%)";
                 return true;
             }
         }
 
+        // 2. Try DDC/CI (external monitors)
+        if (_ddcci != null && _ddcci.IsAvailable())
+        {
+            if (_ddcci.SetBrightness(brightness))
+            {
+                _overlay.DisposeOverlays();
+                _overlayActive = false;
+                ActiveMethod = "DDC-CI";
+                CurrentBrightness = brightness;
+                Status = $"DDC-CI hardware brightness ({brightness}%)";
+                return true;
+            }
+        }
+
+        // 3. Overlay fallback – visual dimming only
         if (_settings.UseOverlayFallback && !_overlay.IsHiddenForSettings)
         {
-            _log.Warn("Hardware failed, trying overlay");
+            _log.Warn("Hardware failed, trying overlay fallback");
             if (_overlay.SetBrightness(brightness))
             {
                 ActiveMethod = _overlay.Name;
                 CurrentBrightness = brightness;
                 _overlayActive = true;
-                Status = $"Overlay dimming ({brightness}%)";
+                Status = $"Overlay visual dimming fallback ({brightness}%)";
                 return true;
             }
+        }
+
+        if (_overlayActive)
+        {
+            _overlay.DisposeOverlays();
+            _overlayActive = false;
         }
 
         Status = "Failed to set brightness";
         _log.Error("All providers failed");
         return false;
-    }
-
-    public void SetBrightnessDirect(int brightness)
-    {
-        SetBrightness(brightness);
     }
 
     public void RestorePrevious()

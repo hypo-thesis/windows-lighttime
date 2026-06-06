@@ -51,7 +51,7 @@ public class DdcCiBrightnessProvider : IBrightnessProvider, IDisposable
                                     Desc = p.szPhysicalMonitorDescription,
                                     Min = mn, Max = mx
                                 });
-                                _log.Info($"DDC/CI: {p.szPhysicalMonitorDescription} {mn}-{mx}");
+                                _log.Info($"DDC/CI: {p.szPhysicalMonitorDescription} min={mn} max={mx}");
                             }
                             else
                             {
@@ -67,7 +67,7 @@ public class DdcCiBrightnessProvider : IBrightnessProvider, IDisposable
             _log.Error($"DDC/CI enum: {ex.Message}");
             _available = false;
         }
-        if (_mons.Count == 0) _log.Warn("DDC/CI: no monitors");
+        if (_mons.Count == 0) _log.Warn("DDC/CI: no compatible monitors");
     }
 
     public BrightnessStatus GetBrightness()
@@ -80,7 +80,8 @@ public class DdcCiBrightnessProvider : IBrightnessProvider, IDisposable
             if (DdcCiNative.GetMonitorBrightness(m.HPhysical, out uint mn, out uint cur, out uint mx))
             {
                 st.CurrentBrightness = ScaleToPercent(cur, mn, mx);
-                st.MinBrightness = 0; st.MaxBrightness = 100;
+                st.MinBrightness = 0;
+                st.MaxBrightness = 100;
                 st.Success = true;
             }
         }
@@ -94,23 +95,22 @@ public class DdcCiBrightnessProvider : IBrightnessProvider, IDisposable
         var ok = true;
         foreach (var m in _mons)
         {
-            var val = ScaleFromPercent(brightness, m.Min, m.Max);
-            if (!DdcCiNative.SetMonitorBrightness(m.HPhysical, val))
+            // Map app percentage (0-100) to monitor hardware range (min-max)
+            // actual = min + ((max - min) * brightness / 100)
+            uint actual = m.Min + (uint)(brightness * (m.Max - m.Min) / 100);
+            if (!DdcCiNative.SetMonitorBrightness(m.HPhysical, actual))
             {
                 _log.Error($"DDC/CI: set failed on {m.Desc}");
                 ok = false;
             }
             else
-                _log.Info($"DDC/CI: {m.Desc} set {val}");
+                _log.Info($"DDC/CI: {m.Desc} set {actual} (target {brightness}%, range {m.Min}-{m.Max})");
         }
         return ok;
     }
 
     private static int ScaleToPercent(uint v, uint mn, uint mx) =>
         (int)((v - mn) * 100 / (mx - mn));
-
-    private static uint ScaleFromPercent(int pct, uint mn, uint mx) =>
-        mn + (uint)(pct * (mx - mn) / 100);
 
     public void Dispose()
     {

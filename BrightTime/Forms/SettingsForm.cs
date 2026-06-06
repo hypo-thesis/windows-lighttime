@@ -361,7 +361,10 @@ public class SettingsForm : Form
         lblTarget.Text = $"Target brightness: {_brightness.TargetBrightness}%";
         lblMethod.Text = $"Active method: {_brightness.ActiveMethod}";
         lblAutoMode.Text = $"Automatic mode: {(_settings.AutomaticEnabled ? "Enabled" : "Disabled")}";
-        lblStatus.Text = _brightness.Status;
+        var status = _brightness.Status;
+        if (_brightness.IsOverlayActive)
+            status += "  |  Overlay fallback is visual dimming only — can stack with Windows brightness";
+        lblStatus.Text = status;
     }
 
     private void UpdateAutoLabel() =>

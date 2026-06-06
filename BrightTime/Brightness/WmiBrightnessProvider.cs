@@ -22,12 +22,12 @@ public class WmiBrightnessProvider : IBrightnessProvider
         var st = new BrightnessStatus { Success = false, ProviderName = Name };
         try
         {
-            using var s = new ManagementObjectSearcher(
-                new ManagementScope(@"\\.\root\wmi"),
-                new ObjectQuery("SELECT * FROM WmiMonitorBrightness"));
-            foreach (var o in s.Get())
+            using var searcher = new ManagementObjectSearcher(
+                "root\\WMI",
+                "SELECT * FROM WmiMonitorBrightness");
+            foreach (ManagementObject item in searcher.Get())
             {
-                st.CurrentBrightness = Convert.ToInt32(o["CurrentBrightness"]);
+                st.CurrentBrightness = Convert.ToInt32(item["CurrentBrightness"]);
                 st.MaxBrightness = 100;
                 st.Success = true;
                 break;
@@ -47,23 +47,17 @@ public class WmiBrightnessProvider : IBrightnessProvider
         try
         {
             brightness = Math.Clamp(brightness, 0, 100);
-            using var s = new ManagementObjectSearcher(
-                new ManagementScope(@"\\.\root\wmi"),
-                new ObjectQuery("SELECT * FROM WmiMonitorBrightnessMethods"));
-            var ok = false;
-            foreach (ManagementObject o in s.Get())
+            using var searcher = new ManagementObjectSearcher(
+                "root\\WMI",
+                "SELECT * FROM WmiMonitorBrightnessMethods");
+            bool success = false;
+            foreach (ManagementObject method in searcher.Get())
             {
-                using (o)
-                {
-                    var p = o.GetMethodParameters("WmiSetBrightness");
-                    p["Brightness"] = brightness;
-                    p["Timeout"] = 0;
-                    if (o.InvokeMethod("WmiSetBrightness", p, null) != null)
-                        ok = true;
-                }
+                method.InvokeMethod("WmiSetBrightness", new object[] { 1, brightness });
+                success = true;
             }
-            if (ok) { _log.Info($"WMI set {brightness}"); return true; }
-            _log.Warn("WMI: no methods");
+            if (success) { _log.Info($"WMI set {brightness}"); return true; }
+            _log.Warn("WMI: no methods found");
             return false;
         }
         catch (Exception ex)
