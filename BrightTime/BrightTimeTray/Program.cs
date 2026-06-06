@@ -1,6 +1,6 @@
-using BrightTime.Services;
+using BrightTimeTray.Services;
 
-namespace BrightTime;
+namespace BrightTimeTray;
 
 static class Program
 {
@@ -12,16 +12,16 @@ static class Program
 
         ApplicationConfiguration.Initialize();
 
-        var log = new LogService();
-        var settingsService = new SettingsService(log);
+        var log = new BrightTime.Services.LogService();
+        var settingsService = new BrightTime.Services.SettingsService(log);
         var settings = settingsService.Load();
         var startup = new StartupService();
 
         if (settings.StartWithWindows) startup.Enable();
         else startup.Disable();
 
-        var scheduleService = new ScheduleService(settings);
-        var brightness = new BrightnessController(log, settings);
+        var scheduleService = new BrightTime.Services.ScheduleService(settings);
+        var brightness = new BrightTime.Services.BrightnessController(log, settings);
 
         Application.Run(new TrayAppContext(settings, settingsService, brightness,
             scheduleService, startup, log));

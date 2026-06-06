@@ -1,9 +1,8 @@
-using BrightTime.Brightness;
 using BrightTime.Models;
 
 namespace BrightTime.Services;
 
-public class BrightnessController
+public class BrightnessController : IDisposable
 {
     private readonly LogService _log;
     private readonly AppSettings _settings;
@@ -26,7 +25,7 @@ public class BrightnessController
         _overlay = new OverlayBrightnessProvider(log);
     }
 
-    public bool SetBrightness(int brightness)
+    public bool SetBrightness(int brightness, bool allowOverlay = true)
     {
         brightness = Math.Clamp(brightness, 0, 100);
         TargetBrightness = brightness;
@@ -58,7 +57,7 @@ public class BrightnessController
             }
         }
 
-        if (_settings.UseOverlayFallback && !_overlay.IsHiddenForSettings)
+        if (allowOverlay && _settings.UseOverlayFallback && !_overlay.IsHiddenForSettings)
         {
             _log.Warn("Hardware failed, trying overlay fallback");
             if (_overlay.SetBrightness(brightness))

@@ -1,11 +1,11 @@
 using Microsoft.Win32;
 
-namespace BrightTime.Services;
+namespace BrightTimeTray.Services;
 
 public class StartupService
 {
     private const string Key = @"Software\Microsoft\Windows\CurrentVersion\Run";
-    private const string Name = "BrightTime";
+    private const string Name = "BrightTimeTray";
 
     public bool IsEnabled()
     {

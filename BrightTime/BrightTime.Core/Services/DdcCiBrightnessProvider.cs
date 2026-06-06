@@ -1,16 +1,16 @@
 using BrightTime.Models;
 using BrightTime.Native;
 
-namespace BrightTime.Brightness;
+namespace BrightTime.Services;
 
 public class DdcCiBrightnessProvider : IBrightnessProvider
 {
-    private readonly Services.LogService _log;
+    private readonly LogService _log;
     private bool _available = true;
 
     public string Name => "DDC/CI";
 
-    public DdcCiBrightnessProvider(Services.LogService log)
+    public DdcCiBrightnessProvider(LogService log)
     {
         _log = log;
     }
@@ -55,8 +55,6 @@ public class DdcCiBrightnessProvider : IBrightnessProvider
                 _log.Error($"DDC/CI: set failed on {m.Desc}");
                 ok = false;
             }
-            else
-                _log.Info($"DDC/CI: {m.Desc} set {actual} (target {brightness}%)");
         }
         DestroyAll(mons);
         return ok;
@@ -67,7 +65,7 @@ public class DdcCiBrightnessProvider : IBrightnessProvider
         try
         {
             DdcCiNative.EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero,
-                (hm, hdc, rect, data) =>
+                (IntPtr hm, IntPtr hdc, ref DdcCiNative.RECT rect, IntPtr data) =>
                 {
                     if (!DdcCiNative.GetNumberOfPhysicalMonitorsFromHMONITOR(hm, out uint cnt) || cnt == 0)
                         return true;

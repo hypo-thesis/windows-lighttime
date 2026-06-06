@@ -1,11 +1,11 @@
 using BrightTime.Models;
 using BrightTime.Native;
 
-namespace BrightTime.Brightness;
+namespace BrightTime.Services;
 
 public class OverlayBrightnessProvider : IBrightnessProvider, IDisposable
 {
-    private readonly Services.LogService _log;
+    private readonly LogService _log;
     private readonly List<OverlayForm> _overlays = new();
     private int _current = 100;
     private bool _hiddenForSettings;
@@ -13,7 +13,7 @@ public class OverlayBrightnessProvider : IBrightnessProvider, IDisposable
     public string Name => "Overlay";
     public bool IsHiddenForSettings => _hiddenForSettings;
 
-    public OverlayBrightnessProvider(Services.LogService log)
+    public OverlayBrightnessProvider(LogService log)
     {
         _log = log;
     }

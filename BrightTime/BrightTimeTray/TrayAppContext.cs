@@ -1,8 +1,9 @@
-using BrightTime.Forms;
+using System.Diagnostics;
 using BrightTime.Models;
 using BrightTime.Services;
+using BrightTimeTray.Forms;
 
-namespace BrightTime;
+namespace BrightTimeTray;
 
 public class TrayAppContext : ApplicationContext
 {
@@ -10,14 +11,15 @@ public class TrayAppContext : ApplicationContext
     private readonly SettingsService _settingsService;
     private readonly BrightnessController _brightness;
     private readonly ScheduleService _scheduleService;
-    private readonly StartupService _startupService;
+    private readonly BrightTimeTray.Services.StartupService _startupService;
     private readonly LogService _log;
     private readonly NotifyIcon _tray;
-    private readonly System.Windows.Forms.Timer _timer;
     private SettingsForm? _settingsForm;
 
+    private static string? _applyPath;
+
     public TrayAppContext(AppSettings settings, SettingsService ss, BrightnessController bc,
-        ScheduleService sc, StartupService su, LogService log)
+        ScheduleService sc, BrightTimeTray.Services.StartupService su, LogService log)
     {
         _settings = settings;
         _settingsService = ss;
@@ -25,6 +27,13 @@ public class TrayAppContext : ApplicationContext
         _scheduleService = sc;
         _startupService = su;
         _log = log;
+
+        var dir = Path.GetDirectoryName(Environment.ProcessPath);
+        if (dir != null)
+        {
+            var p = Path.Combine(dir, "BrightTimeApply.exe");
+            if (File.Exists(p)) _applyPath = p;
+        }
 
         _tray = new NotifyIcon
         {
@@ -34,27 +43,6 @@ public class TrayAppContext : ApplicationContext
             Visible = true
         };
         _tray.DoubleClick += (_, _) => ShowForm();
-
-        ApplyStartupBrightness();
-
-        _timer = new System.Windows.Forms.Timer();
-        _timer.Interval = 300000;
-        _timer.Tick += (_, _) => TimerTick();
-        _timer.Start();
-    }
-
-    private void ApplyStartupBrightness()
-    {
-        try
-        {
-            if (!_settings.AutomaticEnabled) return;
-            if (_settings.ManualOverrideUntil.HasValue && DateTime.Now < _settings.ManualOverrideUntil.Value)
-                return;
-
-            var target = _scheduleService.GetTargetBrightness();
-            _brightness.SetBrightness(target);
-        }
-        catch { }
     }
 
     private ContextMenuStrip BuildMenu()
@@ -64,6 +52,28 @@ public class TrayAppContext : ApplicationContext
         var showItem = new ToolStripMenuItem("Show");
         showItem.Click += (_, _) => ShowForm();
         m.Items.Add(showItem);
+
+        var applyItem = new ToolStripMenuItem("Run Apply Now");
+        applyItem.Click += (_, _) => RunApplyNow();
+        applyItem.Enabled = _applyPath != null;
+        m.Items.Add(applyItem);
+
+        m.Items.Add(new ToolStripSeparator());
+
+        bool taskInstalled = IsTaskInstalled();
+        var installItem = new ToolStripMenuItem(taskInstalled ? "Update Scheduled Task" : "Install Scheduled Task");
+        installItem.Click += (_, _) => { InstallTask(); installItem.Text = "Update Scheduled Task"; };
+        installItem.Enabled = _applyPath != null;
+        m.Items.Add(installItem);
+
+        if (taskInstalled)
+        {
+            var removeItem = new ToolStripMenuItem("Remove Scheduled Task");
+            removeItem.Click += (_, _) => { RemoveTask(); installItem.Text = "Install Scheduled Task"; };
+            m.Items.Add(removeItem);
+        }
+
+        m.Items.Add(new ToolStripSeparator());
 
         var autoItem = new ToolStripMenuItem(
             _settings.AutomaticEnabled ? "Disable Automatic Brightness" : "Enable Automatic Brightness");
@@ -82,10 +92,6 @@ public class TrayAppContext : ApplicationContext
         AddBrightnessItem(m, "Set Brightness 75%", 75);
         AddBrightnessItem(m, "Set Brightness 100%", 100);
         m.Items.Add(new ToolStripSeparator());
-
-        var restoreItem = new ToolStripMenuItem("Restore Previous Brightness");
-        restoreItem.Click += (_, _) => _brightness.RestorePrevious();
-        m.Items.Add(restoreItem);
 
         var startupItem = new ToolStripMenuItem("Start with Windows")
         {
@@ -130,6 +136,9 @@ public class TrayAppContext : ApplicationContext
             _settingsForm = new SettingsForm(_settings, _settingsService, _brightness,
                 _scheduleService, _startupService, _log);
             _settingsForm.ExitRequested += ExitApp;
+            _settingsForm.ApplyNowRequested += RunApplyNow;
+            _settingsForm.InstallTaskRequested += () => InstallTask();
+            _settingsForm.RemoveTaskRequested += () => RemoveTask();
             _settingsForm.FormClosed += (_, _) =>
             {
                 _settingsForm = null;
@@ -141,34 +150,79 @@ public class TrayAppContext : ApplicationContext
         _settingsForm.UpdateStatus();
     }
 
-    private void TimerTick()
+    private void RunApplyNow()
     {
+        if (_applyPath == null) return;
         try
         {
-            if (!_settings.AutomaticEnabled) return;
-            if (_settings.ManualOverrideUntil.HasValue && DateTime.Now < _settings.ManualOverrideUntil.Value)
-                return;
-
-            _settings.ManualOverrideUntil = null;
-            var target = _scheduleService.GetTargetBrightness();
-
-            if (_brightness.CurrentBrightness != target)
-            {
-                _brightness.SetBrightness(target);
-                if (_settingsForm != null && !_settingsForm.IsDisposed && _settingsForm.Visible)
-                    _settingsForm.UpdateStatus();
-            }
+            Process.Start(new ProcessStartInfo(_applyPath, "--apply") { UseShellExecute = false });
         }
         catch (Exception ex)
         {
-            _log.Error($"Timer: {ex.Message}");
+            _log.Error($"Run apply: {ex.Message}");
+        }
+    }
+
+    private static bool IsTaskInstalled()
+    {
+        try
+        {
+            var psi = new ProcessStartInfo("schtasks", "/query /tn \"BrightTime\" /fo LIST /v")
+            {
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                CreateNoWindow = true
+            };
+            using var p = Process.Start(psi);
+            if (p == null) return false;
+            p.WaitForExit(5000);
+            return p.ExitCode == 0;
+        }
+        catch { return false; }
+    }
+
+    private void InstallTask()
+    {
+        if (_applyPath == null) return;
+        try
+        {
+            var cmd = $"/create /tn \"BrightTime\" /tr \"\\\"{_applyPath}\\\" --apply\" /sc minute /mo 5 /it /rl limited /f";
+            var psi = new ProcessStartInfo("schtasks", cmd)
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+            using var p = Process.Start(psi);
+            p?.WaitForExit(10000);
+            _log.Info("Scheduled task installed");
+        }
+        catch (Exception ex)
+        {
+            _log.Error($"Install task: {ex.Message}");
+        }
+    }
+
+    private void RemoveTask()
+    {
+        try
+        {
+            var psi = new ProcessStartInfo("schtasks", "/delete /tn \"BrightTime\" /f")
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+            using var p = Process.Start(psi);
+            p?.WaitForExit(10000);
+            _log.Info("Scheduled task removed");
+        }
+        catch (Exception ex)
+        {
+            _log.Error($"Remove task: {ex.Message}");
         }
     }
 
     private void ExitApp()
     {
-        _timer.Dispose();
-
         if (_settings.RestoreBrightnessOnExit)
             _brightness.RestorePrevious();
 
@@ -198,7 +252,6 @@ public class TrayAppContext : ApplicationContext
     {
         if (disposing)
         {
-            _timer.Dispose();
             _brightness.Dispose();
             _tray.Dispose();
         }

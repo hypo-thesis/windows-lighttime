@@ -1,6 +1,6 @@
 using BrightTime.Models;
 
-namespace BrightTime.Brightness;
+namespace BrightTime.Services;
 
 public interface IBrightnessProvider
 {

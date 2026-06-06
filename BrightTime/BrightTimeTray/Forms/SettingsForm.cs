@@ -1,7 +1,8 @@
+using System.Diagnostics;
 using BrightTime.Models;
 using BrightTime.Services;
 
-namespace BrightTime.Forms;
+namespace BrightTimeTray.Forms;
 
 public class SettingsForm : Form
 {
@@ -9,14 +10,13 @@ public class SettingsForm : Form
     private readonly SettingsService _settingsService;
     private readonly BrightnessController _brightness;
     private readonly ScheduleService _scheduleService;
-    private readonly StartupService _startupService;
+    private readonly BrightTimeTray.Services.StartupService _startupService;
     private readonly LogService _log;
 
     private CheckBox chkAuto = null!;
     private TrackBar trackBrightness = null!;
     private Label lblBrightnessVal = null!;
     private Button btnApply = null!;
-    private CheckBox chkSmooth = null!;
     private CheckBox chkOverlay = null!;
     private CheckBox chkRestore = null!;
     private CheckBox chkStartup = null!;
@@ -26,7 +26,12 @@ public class SettingsForm : Form
     private Button btnSave = null!;
     private Button btnMinimize = null!;
     private Button btnExit = null!;
+    private Button btnInstallTask = null!;
+    private Button btnRemoveTask = null!;
+    private Button btnApplyNow = null!;
     private Label lblStatus = null!;
+    private Label lblTask = null!;
+    private Label lblOverlayWarn = null!;
     private Label lblCurrent = null!;
     private Label lblTarget = null!;
     private Label lblMethod = null!;
@@ -35,9 +40,12 @@ public class SettingsForm : Form
     private readonly BindingSource _scheduleSource = new();
 
     public event Action? ExitRequested;
+    public event Action? ApplyNowRequested;
+    public event Action? InstallTaskRequested;
+    public event Action? RemoveTaskRequested;
 
     public SettingsForm(AppSettings settings, SettingsService ss, BrightnessController bc,
-        ScheduleService sc, StartupService su, LogService log)
+        ScheduleService sc, BrightTimeTray.Services.StartupService su, LogService log)
     {
         _settings = settings;
         _settingsService = ss;
@@ -49,7 +57,7 @@ public class SettingsForm : Form
         AutoScaleMode = AutoScaleMode.Dpi;
         Text = "BrightTime";
         MinimumSize = new Size(520, 620);
-        Size = new Size(600, 1400);
+        Size = new Size(600, 1200);
         StartPosition = FormStartPosition.CenterScreen;
         AutoScroll = true;
         Font = new Font("Segoe UI", 9F, GraphicsUnit.Point);
@@ -62,7 +70,6 @@ public class SettingsForm : Form
         BuildUI();
         LoadSettings();
         UpdateStatus();
-        _log.Info("SettingsForm opened");
     }
 
     private void BuildUI()
@@ -85,23 +92,12 @@ public class SettingsForm : Form
         tlp.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         tlp.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         tlp.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        tlp.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
-        var title = new Label
-        {
-            Text = "BrightTime",
-            Font = boldFnt,
-            AutoSize = true,
-            Margin = new Padding(0, 0, 0, 4),
-        };
+        var title = new Label { Text = "BrightTime", Font = boldFnt, AutoSize = true, Margin = new Padding(0, 0, 0, 4) };
         tlp.Controls.Add(title, 0, 0);
 
-        var statusPanel = new TableLayoutPanel
-        {
-            ColumnCount = 1,
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            Margin = new Padding(0, 0, 0, 8),
-        };
+        var statusPanel = new TableLayoutPanel { ColumnCount = 1, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Margin = new Padding(0, 0, 0, 8) };
         statusPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         statusPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         statusPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -117,125 +113,60 @@ public class SettingsForm : Form
         statusPanel.Controls.Add(lblAutoMode, 0, 3);
         tlp.Controls.Add(statusPanel, 0, 1);
 
-        var g1 = new GroupBox
-        {
-            Text = "Controls",
-            Dock = DockStyle.Fill,
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            Margin = new Padding(0, 8, 0, 8),
-        };
-        var controlsInner = new TableLayoutPanel
-        {
-            ColumnCount = 2,
-            Dock = DockStyle.Fill,
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            Padding = new Padding(6),
-            Margin = Padding.Empty,
-        };
+        var g1 = new GroupBox { Text = "Controls", Dock = DockStyle.Fill, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Margin = new Padding(0, 8, 0, 8) };
+        var controlsInner = new TableLayoutPanel { ColumnCount = 2, Dock = DockStyle.Fill, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Padding = new Padding(6), Margin = Padding.Empty };
         controlsInner.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         controlsInner.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-        controlsInner.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        controlsInner.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        controlsInner.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        controlsInner.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        controlsInner.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        controlsInner.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        controlsInner.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        controlsInner.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        for (int i = 0; i < 8; i++) controlsInner.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
         int row = 0;
-
         chkAuto = new CheckBox { Font = labelFnt, Text = "Enable automatic brightness", AutoSize = true, Margin = new Padding(0, 0, 0, 2) };
-        controlsInner.Controls.Add(chkAuto, 0, row);
-        controlsInner.SetColumnSpan(chkAuto, 2);
+        controlsInner.Controls.Add(chkAuto, 0, row); controlsInner.SetColumnSpan(chkAuto, 2);
         chkAuto.CheckedChanged += (_, _) => { _settings.AutomaticEnabled = chkAuto.Checked; UpdateAutoLabel(); };
         row++;
 
-        var lblManual = new Label { Font = labelFnt, Text = "Manual brightness:", AutoSize = true, Margin = new Padding(0, 4, 4, 2) };
-        controlsInner.Controls.Add(lblManual, 0, row);
-
+        controlsInner.Controls.Add(new Label { Font = labelFnt, Text = "Manual brightness:", AutoSize = true, Margin = new Padding(0, 4, 4, 2) }, 0, row);
         lblBrightnessVal = new Label { Font = labelFnt, Text = "100", AutoSize = true, Margin = new Padding(0, 4, 0, 2), TextAlign = ContentAlignment.MiddleRight };
         controlsInner.Controls.Add(lblBrightnessVal, 1, row);
         row++;
 
-        trackBrightness = new TrackBar
-        {
-            Minimum = 0, Maximum = 100, Value = 100,
-            TickFrequency = 10,
-            Dock = DockStyle.Fill,
-            Margin = new Padding(0, 0, 0, 2),
-        };
-        controlsInner.Controls.Add(trackBrightness, 0, row);
-        controlsInner.SetColumnSpan(trackBrightness, 2);
+        trackBrightness = new TrackBar { Minimum = 0, Maximum = 100, Value = 100, TickFrequency = 10, Dock = DockStyle.Fill, Margin = new Padding(0, 0, 0, 2) };
+        controlsInner.Controls.Add(trackBrightness, 0, row); controlsInner.SetColumnSpan(trackBrightness, 2);
         trackBrightness.ValueChanged += (_, _) => lblBrightnessVal.Text = trackBrightness.Value.ToString();
         row++;
 
         btnApply = new Button { Font = labelFnt, Text = "Apply Manual Brightness", AutoSize = true, Margin = new Padding(0, 0, 0, 4) };
-        controlsInner.Controls.Add(btnApply, 0, row);
-        controlsInner.SetColumnSpan(btnApply, 2);
+        controlsInner.Controls.Add(btnApply, 0, row); controlsInner.SetColumnSpan(btnApply, 2);
         btnApply.Click += BtnApply_Click;
         row++;
 
-        chkSmooth = new CheckBox { Font = labelFnt, Text = "Smooth transition", AutoSize = true, Margin = new Padding(0, 0, 0, 2) };
-        controlsInner.Controls.Add(chkSmooth, 0, row);
-        controlsInner.SetColumnSpan(chkSmooth, 2);
-        row++;
-
-        chkOverlay = new CheckBox { Font = labelFnt, Text = "Use overlay fallback", AutoSize = true, Margin = new Padding(0, 0, 0, 2) };
-        controlsInner.Controls.Add(chkOverlay, 0, row);
-        controlsInner.SetColumnSpan(chkOverlay, 2);
+        chkOverlay = new CheckBox { Font = labelFnt, Text = "Use overlay fallback (tray mode only)", AutoSize = true, Margin = new Padding(0, 0, 0, 2) };
+        controlsInner.Controls.Add(chkOverlay, 0, row); controlsInner.SetColumnSpan(chkOverlay, 2);
         row++;
 
         chkRestore = new CheckBox { Font = labelFnt, Text = "Restore brightness on exit", AutoSize = true, Margin = new Padding(0, 0, 0, 2) };
-        controlsInner.Controls.Add(chkRestore, 0, row);
-        controlsInner.SetColumnSpan(chkRestore, 2);
+        controlsInner.Controls.Add(chkRestore, 0, row); controlsInner.SetColumnSpan(chkRestore, 2);
         row++;
 
         chkStartup = new CheckBox { Font = labelFnt, Text = "Start with Windows", AutoSize = true, Margin = new Padding(0, 0, 0, 2) };
-        controlsInner.Controls.Add(chkStartup, 0, row);
-        controlsInner.SetColumnSpan(chkStartup, 2);
+        controlsInner.Controls.Add(chkStartup, 0, row); controlsInner.SetColumnSpan(chkStartup, 2);
         chkStartup.CheckedChanged += ChkStartup_Changed;
-
         g1.Controls.Add(controlsInner);
         tlp.Controls.Add(g1, 0, 2);
 
-        var g2 = new GroupBox
-        {
-            Text = "Schedule",
-            Dock = DockStyle.Fill,
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            Margin = new Padding(0, 8, 0, 8),
-        };
-        var scheduleInner = new TableLayoutPanel
-        {
-            ColumnCount = 2,
-            Dock = DockStyle.Fill,
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            Padding = new Padding(6),
-            Margin = Padding.Empty,
-        };
+        var g2 = new GroupBox { Text = "Schedule", Dock = DockStyle.Fill, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Margin = new Padding(0, 8, 0, 8) };
+        var scheduleInner = new TableLayoutPanel { ColumnCount = 2, Dock = DockStyle.Fill, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Padding = new Padding(6), Margin = Padding.Empty };
         scheduleInner.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         scheduleInner.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         scheduleInner.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         scheduleInner.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         scheduleInner.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
-        scheduleList = new ListBox
-        {
-            Font = labelFnt,
-            Height = 150,
-            Margin = new Padding(0, 0, 0, 4),
-            Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top,
-        };
+        scheduleList = new ListBox { Font = labelFnt, Height = 150, Margin = new Padding(0, 0, 0, 4), Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top };
         _scheduleSource.DataSource = new List<SchedulePoint>();
         scheduleList.DataSource = _scheduleSource;
         scheduleList.MouseDoubleClick += ScheduleList_DoubleClick;
-        scheduleInner.Controls.Add(scheduleList, 0, 0);
-        scheduleInner.SetColumnSpan(scheduleList, 2);
+        scheduleInner.Controls.Add(scheduleList, 0, 0); scheduleInner.SetColumnSpan(scheduleList, 2);
 
         btnAdd = new Button { Font = labelFnt, Text = "Add Point", AutoSize = true, Margin = new Padding(0, 0, 8, 4) };
         btnAdd.Click += BtnAdd_Click;
@@ -245,37 +176,56 @@ public class SettingsForm : Form
         btnRemove.Click += BtnRemove_Click;
         scheduleInner.Controls.Add(btnRemove, 1, 1);
 
-        var btnScheduleSave = new Button { Font = labelFnt, Text = "Save Schedule", AutoSize = true, Margin = new Padding(0, 0, 0, 0) };
+        var btnScheduleSave = new Button { Font = labelFnt, Text = "Save Schedule", AutoSize = true };
         btnScheduleSave.Click += (_, _) => { _settingsService.Save(_settings); MessageBox.Show("Schedule saved.", "BrightTime", MessageBoxButtons.OK, MessageBoxIcon.Information); };
-        scheduleInner.Controls.Add(btnScheduleSave, 1, 2);
-        scheduleInner.SetColumnSpan(btnScheduleSave, 2);
+        scheduleInner.Controls.Add(btnScheduleSave, 1, 2); scheduleInner.SetColumnSpan(btnScheduleSave, 2);
         btnScheduleSave.Anchor = AnchorStyles.Right;
-
         g2.Controls.Add(scheduleInner);
         tlp.Controls.Add(g2, 0, 3);
 
-        lblStatus = new Label
+        var taskGroup = new GroupBox { Text = "Scheduled Task (0 MB idle mode)", Dock = DockStyle.Fill, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Margin = new Padding(0, 8, 0, 8) };
+        var taskInner = new TableLayoutPanel { ColumnCount = 2, Dock = DockStyle.Fill, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Padding = new Padding(6) };
+        taskInner.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        taskInner.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        taskInner.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        taskInner.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        taskInner.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+
+        lblTask = new Label { Font = labelFnt, Text = "Status: checking...", AutoSize = true, Margin = new Padding(0, 0, 0, 4) };
+        taskInner.Controls.Add(lblTask, 0, 0); taskInner.SetColumnSpan(lblTask, 2);
+
+        btnInstallTask = new Button { Font = labelFnt, Text = "Install Task", AutoSize = true, Margin = new Padding(0, 0, 8, 4) };
+        btnInstallTask.Click += (_, _) => InstallTaskRequested?.Invoke();
+        taskInner.Controls.Add(btnInstallTask, 0, 1);
+
+        btnRemoveTask = new Button { Font = labelFnt, Text = "Remove Task", AutoSize = true, Margin = new Padding(0, 0, 0, 4) };
+        btnRemoveTask.Click += (_, _) => RemoveTaskRequested?.Invoke();
+        taskInner.Controls.Add(btnRemoveTask, 1, 1);
+
+        btnApplyNow = new Button { Font = labelFnt, Text = "Run Apply Now", AutoSize = true, Margin = new Padding(0, 0, 0, 0) };
+        btnApplyNow.Click += (_, _) => ApplyNowRequested?.Invoke();
+        taskInner.Controls.Add(btnApplyNow, 0, 2);
+
+        taskGroup.Controls.Add(taskInner);
+        tlp.Controls.Add(taskGroup, 0, 4);
+
+        lblOverlayWarn = new Label
         {
             Font = labelFnt,
-            Text = "",
+            Text = "Overlay fallback requires BrightTimeTray to stay running. Scheduled zero-idle mode supports hardware brightness only.",
             AutoSize = true,
             ForeColor = Color.DarkOrange,
-            Margin = new Padding(0, 4, 0, 0),
+            MaximumSize = new Size(ClientSize.Width - 48, 0),
+            Margin = new Padding(0, 4, 0, 4),
         };
-        tlp.Controls.Add(lblStatus, 0, 4);
+        tlp.Controls.Add(lblOverlayWarn, 0, 5);
+
+        lblStatus = new Label { Font = labelFnt, Text = "", AutoSize = true, ForeColor = Color.DarkOrange, Margin = new Padding(0, 4, 0, 0) };
+        tlp.Controls.Add(lblStatus, 0, 6);
 
         Controls.Add(tlp);
 
-        var bottomPanel = new FlowLayoutPanel
-        {
-            Dock = DockStyle.Bottom,
-            FlowDirection = FlowDirection.LeftToRight,
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            Padding = new Padding(8),
-            Margin = Padding.Empty,
-        };
-
+        var bottomPanel = new FlowLayoutPanel { Dock = DockStyle.Bottom, FlowDirection = FlowDirection.LeftToRight, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Padding = new Padding(8), Margin = Padding.Empty };
         btnSave = new Button { Font = new Font(fnt.FontFamily, 10f), Text = "Save", AutoSize = true, Margin = new Padding(4) };
         btnSave.Click += (_, _) => { _settingsService.Save(_settings); MessageBox.Show("Settings saved.", "BrightTime", MessageBoxButtons.OK, MessageBoxIcon.Information); };
         bottomPanel.Controls.Add(btnSave);
@@ -284,19 +234,40 @@ public class SettingsForm : Form
         btnMinimize.Click += (_, _) => Close();
         bottomPanel.Controls.Add(btnMinimize);
 
-        btnExit = new Button
-        {
-            Font = new Font(fnt.FontFamily, 10f),
-            Text = "Exit",
-            AutoSize = true,
-            Margin = new Padding(4),
-            BackColor = Color.Crimson,
-            ForeColor = Color.White,
-        };
+        btnExit = new Button { Font = new Font(fnt.FontFamily, 10f), Text = "Exit", AutoSize = true, Margin = new Padding(4), BackColor = Color.Crimson, ForeColor = Color.White };
         btnExit.Click += (_, _) => { ExitRequested?.Invoke(); Close(); };
         bottomPanel.Controls.Add(btnExit);
 
         Controls.Add(bottomPanel);
+    }
+
+    public void UpdateStatus()
+    {
+        if (IsDisposed) return;
+        lblCurrent.Text = $"Current brightness: {_brightness.CurrentBrightness}%";
+        lblTarget.Text = $"Target brightness: {_brightness.TargetBrightness}%";
+        lblMethod.Text = $"Active method: {_brightness.ActiveMethod}";
+        lblAutoMode.Text = $"Automatic mode: {(_settings.AutomaticEnabled ? "Enabled" : "Disabled")}";
+        var status = _brightness.Status;
+        if (_brightness.IsOverlayActive)
+            status += "  |  Overlay is visual dimming, only works while Tray is running";
+        lblStatus.Text = status;
+        UpdateTaskStatus();
+        lblOverlayWarn.Visible = !_brightness.IsOverlayActive;
+    }
+
+    private void UpdateTaskStatus()
+    {
+        try
+        {
+            var psi = new ProcessStartInfo("schtasks", "/query /tn \"BrightTime\" /fo LIST /v")
+            { UseShellExecute = false, RedirectStandardOutput = true, CreateNoWindow = true };
+            using var p = Process.Start(psi);
+            if (p == null) { lblTask.Text = "Status: could not check"; return; }
+            p.WaitForExit(3000);
+            lblTask.Text = p.ExitCode == 0 ? "Status: installed (runs every 5 min, 0 MB idle)" : "Status: not installed";
+        }
+        catch { lblTask.Text = "Status: could not check"; }
     }
 
     private void ScheduleList_DoubleClick(object? sender, MouseEventArgs e)
@@ -347,24 +318,10 @@ public class SettingsForm : Form
     {
         chkAuto.Checked = _settings.AutomaticEnabled;
         trackBrightness.Value = _settings.LastManualBrightness;
-        chkSmooth.Checked = _settings.SmoothTransitionEnabled;
         chkOverlay.Checked = _settings.UseOverlayFallback;
         chkRestore.Checked = _settings.RestoreBrightnessOnExit;
         chkStartup.Checked = _startupService.IsEnabled();
         RefreshSchedule();
-    }
-
-    public void UpdateStatus()
-    {
-        if (IsDisposed) return;
-        lblCurrent.Text = $"Current brightness: {_brightness.CurrentBrightness}%";
-        lblTarget.Text = $"Target brightness: {_brightness.TargetBrightness}%";
-        lblMethod.Text = $"Active method: {_brightness.ActiveMethod}";
-        lblAutoMode.Text = $"Automatic mode: {(_settings.AutomaticEnabled ? "Enabled" : "Disabled")}";
-        var status = _brightness.Status;
-        if (_brightness.IsOverlayActive)
-            status += "  |  Overlay fallback is visual dimming only — can stack with Windows brightness";
-        lblStatus.Text = status;
     }
 
     private void UpdateAutoLabel() =>
@@ -372,10 +329,7 @@ public class SettingsForm : Form
 
     private void RefreshSchedule()
     {
-        _scheduleSource.DataSource = _settings.Schedule.Select((sp, i) => new
-        {
-            Display = $"{sp.Time} -> {sp.Brightness}%"
-        }).ToList();
+        _scheduleSource.DataSource = _settings.Schedule.Select((sp, i) => new { Display = $"{sp.Time} -> {sp.Brightness}%" }).ToList();
         _scheduleSource.ResetBindings(false);
     }
 

@@ -1,16 +1,16 @@
 using System.Management;
 using BrightTime.Models;
 
-namespace BrightTime.Brightness;
+namespace BrightTime.Services;
 
 public class WmiBrightnessProvider : IBrightnessProvider
 {
-    private readonly Services.LogService _log;
+    private readonly LogService _log;
     private bool _available = true;
 
     public string Name => "WMI";
 
-    public WmiBrightnessProvider(Services.LogService log)
+    public WmiBrightnessProvider(LogService log)
     {
         _log = log;
     }

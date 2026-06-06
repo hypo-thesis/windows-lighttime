@@ -1,4 +1,4 @@
-namespace BrightTime.Services;
+namespace BrightTimeTray.Services;
 
 public class SingleInstanceService : IDisposable
 {
@@ -7,7 +7,7 @@ public class SingleInstanceService : IDisposable
 
     public SingleInstanceService()
     {
-        _mutex = new Mutex(true, "BrightTime.SingleInstance", out _owned);
+        _mutex = new Mutex(true, "BrightTimeTray.SingleInstance", out _owned);
     }
 
     public bool IsFirst => _owned;
