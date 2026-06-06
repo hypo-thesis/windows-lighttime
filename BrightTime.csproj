@@ -22,4 +22,9 @@
     <EmbeddedResource Include="Assets\app.ico" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Remove="app.manifest" />
+    <EmbeddedResource Include="app.manifest" />
+  </ItemGroup>
+
 </Project>
