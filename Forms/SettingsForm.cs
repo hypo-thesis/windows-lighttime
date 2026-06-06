@@ -46,8 +46,8 @@ public class SettingsForm : Form
         _log = log;
 
         Text = "BrightTime";
-        Size = new Size(500, 700);
-        MinimumSize = new Size(500, 600);
+        Size = new Size(560, 800);
+        MinimumSize = new Size(560, 700);
         FormBorderStyle = FormBorderStyle.FixedSingle;
         MaximizeBox = false;
         StartPosition = FormStartPosition.CenterScreen;
@@ -62,13 +62,14 @@ public class SettingsForm : Form
     private void BuildUI()
     {
         var y = 12;
+        var w = 520;
 
-        lblCurrent = CreateLabel($"Current brightness: --", y); y += 24;
-        lblTarget = CreateLabel($"Target brightness: --", y); y += 24;
-        lblMethod = CreateLabel($"Active method: --", y); y += 24;
-        lblAutoMode = CreateLabel($"Automatic mode: --", y); y += 30;
+        lblCurrent = MakeLabel($"Current brightness: --", 14, y, w); y += 24;
+        lblTarget = MakeLabel($"Target brightness: --", 14, y, w); y += 24;
+        lblMethod = MakeLabel($"Active method: --", 14, y, w); y += 24;
+        lblAutoMode = MakeLabel($"Automatic mode: --", 14, y, w); y += 30;
 
-        var grp = new GroupBox { Text = "Controls", Bounds = new Rectangle(12, y, 460, 270) };
+        var grp = new GroupBox { Text = "Controls", Bounds = new Rectangle(12, y, w, 280) };
         var gy = 20;
 
         chkAuto = new CheckBox { Text = "Enable automatic brightness", Bounds = new Rectangle(8, gy, 300, 24) };
@@ -80,8 +81,8 @@ public class SettingsForm : Form
         grp.Controls.Add(lblTrk);
         gy += 22;
 
-        lblBrightnessVal = new Label { Text = "100", Bounds = new Rectangle(380, gy, 40, 24), TextAlign = ContentAlignment.MiddleRight };
-        trackBrightness = new TrackBar { Minimum = 0, Maximum = 100, Value = 100, Bounds = new Rectangle(8, gy, 370, 40), TickFrequency = 10 };
+        lblBrightnessVal = new Label { Text = "100", Bounds = new Rectangle(w - 80, gy - 2, 50, 24), TextAlign = ContentAlignment.MiddleRight };
+        trackBrightness = new TrackBar { Minimum = 0, Maximum = 100, Value = 100, Bounds = new Rectangle(8, gy, w - 100, 40), TickFrequency = 10 };
         trackBrightness.ValueChanged += (_, _) => lblBrightnessVal.Text = trackBrightness.Value.ToString();
         grp.Controls.Add(lblBrightnessVal);
         grp.Controls.Add(trackBrightness);
@@ -90,7 +91,7 @@ public class SettingsForm : Form
         btnApply = new Button { Text = "Apply Manual Brightness", Bounds = new Rectangle(8, gy, 180, 28) };
         btnApply.Click += BtnApply_Click;
         grp.Controls.Add(btnApply);
-        gy += 34;
+        gy += 36;
 
         chkSmooth = new CheckBox { Text = "Smooth transition", Bounds = new Rectangle(8, gy, 200, 24) };
         grp.Controls.Add(chkSmooth);
@@ -109,47 +110,58 @@ public class SettingsForm : Form
         grp.Controls.Add(chkStartup);
 
         Controls.Add(grp);
-        y += grp.Height + 8;
+        y += grp.Height + 10;
 
-        var grp2 = new GroupBox { Text = "Schedule", Bounds = new Rectangle(12, y, 460, 200) };
-        scheduleList = new ListBox { Bounds = new Rectangle(8, 20, 440, 100), DisplayMember = "Display" };
+        var grp2 = new GroupBox { Text = "Schedule (double-click item to edit)", Bounds = new Rectangle(12, y, w, 250) };
+        scheduleList = new ListBox { Bounds = new Rectangle(8, 22, w - 18, 130) };
         _scheduleSource.DataSource = new List<SchedulePoint>();
         scheduleList.DataSource = _scheduleSource;
+        scheduleList.MouseDoubleClick += ScheduleList_DoubleClick;
         grp2.Controls.Add(scheduleList);
 
-        btnAdd = new Button { Text = "Add Point", Bounds = new Rectangle(8, 128, 90, 26) };
+        btnAdd = new Button { Text = "Add Point", Bounds = new Rectangle(8, 160, 90, 28) };
         btnAdd.Click += BtnAdd_Click;
         grp2.Controls.Add(btnAdd);
 
-        btnRemove = new Button { Text = "Remove", Bounds = new Rectangle(104, 128, 80, 26) };
+        btnRemove = new Button { Text = "Remove", Bounds = new Rectangle(104, 160, 80, 28) };
         btnRemove.Click += BtnRemove_Click;
         grp2.Controls.Add(btnRemove);
 
-        btnSave = new Button { Text = "Save Schedule", Bounds = new Rectangle(360, 165, 90, 26) };
+        btnSave = new Button { Text = "Save Schedule", Bounds = new Rectangle(w - 100, 210, 90, 28) };
         btnSave.Click += BtnSave_Click;
         grp2.Controls.Add(btnSave);
 
         Controls.Add(grp2);
-        y += grp2.Height + 8;
+        y += grp2.Height + 10;
 
-        lblStatus = new Label { Text = "", Bounds = new Rectangle(14, y, 460, 22), ForeColor = Color.DarkOrange };
+        lblStatus = new Label { Text = "", Bounds = new Rectangle(14, y, w, 22), ForeColor = Color.DarkOrange };
         Controls.Add(lblStatus);
-        y += 26;
+        y += 28;
 
-        btnMinimize = new Button { Text = "Minimize to Tray", Bounds = new Rectangle(12, y, 130, 28) };
+        btnMinimize = new Button { Text = "Minimize to Tray", Bounds = new Rectangle(12, y, 140, 30) };
         btnMinimize.Click += (_, _) => { _closing = false; Close(); };
         Controls.Add(btnMinimize);
 
-        btnExit = new Button { Text = "Exit", Bounds = new Rectangle(150, y, 80, 28), BackColor = Color.IndianRed };
+        btnExit = new Button { Text = "Exit", Bounds = new Rectangle(160, y, 90, 30), BackColor = Color.IndianRed, ForeColor = Color.White };
         btnExit.Click += (_, _) => { _closing = true; Close(); };
         Controls.Add(btnExit);
     }
 
-    private Label CreateLabel(string text, int y)
+    private Label MakeLabel(string text, int x, int y, int w)
     {
-        var lbl = new Label { Text = text, Bounds = new Rectangle(14, y, 460, 22) };
+        var lbl = new Label { Text = text, Bounds = new Rectangle(x, y, w, 22) };
         Controls.Add(lbl);
         return lbl;
+    }
+
+    private void ScheduleList_DoubleClick(object? sender, MouseEventArgs e)
+    {
+        if (scheduleList.SelectedItem is ScheduleDisplay sd)
+        {
+            using var dlg = new ScheduleEditDialog(sd.Point);
+            if (dlg.ShowDialog(this) == DialogResult.OK)
+                RefreshSchedule();
+        }
     }
 
     private void LoadSettings()
@@ -193,6 +205,43 @@ public class SettingsForm : Form
         public int Index { get; set; }
         public string Display { get; set; } = "";
         public SchedulePoint Point { get; set; } = new();
+    }
+
+    private class ScheduleEditDialog : Form
+    {
+        private readonly TextBox txtTime;
+        private readonly TextBox txtBrightness;
+        private readonly SchedulePoint _point;
+
+        public ScheduleEditDialog(SchedulePoint pt)
+        {
+            _point = pt;
+            Text = "Edit Schedule Point";
+            Size = new Size(280, 160);
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            StartPosition = FormStartPosition.CenterParent;
+            MinimizeBox = false;
+            MaximizeBox = false;
+            AcceptButton = new Button { DialogResult = DialogResult.OK };
+            CancelButton = new Button { DialogResult = DialogResult.Cancel };
+
+            new Label { Text = "Time (HH:MM):", Bounds = new Rectangle(12, 16, 100, 20), Parent = this };
+            txtTime = new TextBox { Text = pt.Time, Bounds = new Rectangle(120, 14, 120, 22), Parent = this };
+
+            new Label { Text = "Brightness (0-100):", Bounds = new Rectangle(12, 48, 120, 20), Parent = this };
+            txtBrightness = new TextBox { Text = pt.Brightness.ToString(), Bounds = new Rectangle(120, 46, 60, 22), Parent = this };
+
+            var ok = new Button { Text = "OK", Bounds = new Rectangle(80, 86, 75, 26), DialogResult = DialogResult.OK, Parent = this };
+            ok.Click += (_, _) =>
+            {
+                _point.Time = txtTime.Text;
+                if (int.TryParse(txtBrightness.Text, out var b))
+                    _point.Brightness = Math.Clamp(b, 0, 100);
+                Close();
+            };
+
+            var cancel = new Button { Text = "Cancel", Bounds = new Rectangle(165, 86, 75, 26), DialogResult = DialogResult.Cancel, Parent = this };
+        }
     }
 
     private void BtnApply_Click(object? sender, EventArgs e)
